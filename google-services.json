@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "422746833968",
+    "project_id": "onylink-7bbdf",
+    "storage_bucket": "onylink-7bbdf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:422746833968:android:3466da86ffc917669759f5",
+        "android_client_info": {
+          "package_name": "com.goxtechub.onylink"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBGmtkbchPTZhTkQfprY5-UUajU4iQfZFM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

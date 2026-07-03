@@ -17,9 +17,14 @@
     },
     "android": {
       "package": "com.goxtechub.onylink",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#0A1030"
-      }
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -52,7 +57,12 @@
     },
     "extra": {
       "apiUrl": "http://localhost:4444",
-      "transportSecret": "change-me-transport"
-    }
+      "transportSecret": "change-me-transport",
+      "router": {},
+      "eas": {
+        "projectId": "d639d712-7539-45d0-b81c-083d54ecaa6f"
+      }
+    },
+    "owner": "goxtechubdev"
   }
 }

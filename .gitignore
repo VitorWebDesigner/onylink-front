@@ -24,6 +24,11 @@ android/
 .env
 .env.*.local
 
+# chave de service account do Firebase (FCM V1) — SEGREDO, vive fora do repo
+*firebase-adminsdk*.json
+onylink-7bbdf-*.json
+hotmart-*.json
+
 # logs / SO
 npm-debug.*
 yarn-debug.*
