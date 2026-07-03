@@ -1,5 +1,6 @@
 import '../theme/global.css';
 import { useEffect } from 'react';
+import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -23,6 +24,21 @@ function AuthGate() {
   useEffect(() => {
     void bootstrap();
   }, [bootstrap]);
+
+  // tocar num PUSH → navega pro deep link (data.url) — inclusive com o app fechado
+  useEffect(() => {
+    const openFromData = (data: unknown) => {
+      const url = (data as { url?: string } | null)?.url;
+      if (typeof url === 'string' && url.startsWith('/')) router.push(url as never);
+    };
+    void Notifications.getLastNotificationResponseAsync().then((r) => {
+      if (r) openFromData(r.notification.request.content.data);
+    });
+    const sub = Notifications.addNotificationResponseReceivedListener((r) => {
+      openFromData(r.notification.request.content.data);
+    });
+    return () => sub.remove();
+  }, [router]);
 
   useEffect(() => {
     if (status === 'loading') return;

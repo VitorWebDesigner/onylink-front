@@ -3,6 +3,7 @@ import { api } from '../lib/api';
 import { tokenStore } from '../lib/storage';
 import { config } from '../lib/config';
 import { mockUser } from '../lib/mock';
+import { registerPush, unregisterPush } from '../lib/push';
 
 export interface SessionUser {
   id: string;
@@ -47,6 +48,7 @@ export const useAuth = create<AuthState>((set) => ({
     try {
       const me = await api.get<SessionUser & Record<string, unknown>>('/web/auth/me');
       set({ status: 'authenticated', user: { id: me.id, name: me.name, email: me.email, handle: me.handle, role: me.role } });
+      void registerPush();
     } catch {
       await tokenStore.clear();
       set({ status: 'guest', user: null });
@@ -62,6 +64,7 @@ export const useAuth = create<AuthState>((set) => ({
     const data = await api.post<AuthTokens>('/web/auth/login', { email, password });
     await tokenStore.save(data.accessToken, data.refreshToken);
     set({ status: 'authenticated', user: data.user });
+    void registerPush();
   },
 
   async register(input) {
@@ -72,6 +75,7 @@ export const useAuth = create<AuthState>((set) => ({
     const data = await api.post<AuthTokens>('/web/auth/register', input);
     await tokenStore.save(data.accessToken, data.refreshToken);
     set({ status: 'authenticated', user: data.user });
+    void registerPush();
   },
 
   async logout() {
@@ -79,6 +83,7 @@ export const useAuth = create<AuthState>((set) => ({
       set({ status: 'guest', user: null });
       return;
     }
+    await unregisterPush(); // antes de derrubar a sessão (a rota exige Bearer)
     const refreshToken = await tokenStore.getRefresh();
     try {
       await api.post('/web/auth/logout', { refreshToken });
