@@ -29,5 +29,8 @@ export function useKeyboardPadding(): number {
     return () => { show.remove(); hide.remove(); };
   }, []);
 
-  return Math.max(0, kb - insets.bottom);
+  // iOS: a tela já aplica o safe inset inferior (SafeAreaView) → desconta.
+  // Android (edge-to-edge): o teclado cobre inclusive a área da nav bar — usar a
+  // altura CHEIA; descontar deixava o composer parcialmente atrás do teclado.
+  return Math.max(0, kb - (Platform.OS === 'ios' ? insets.bottom : 0));
 }

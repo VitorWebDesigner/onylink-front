@@ -1,4 +1,5 @@
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { ActivityIndicator, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { Avatar } from './Avatar';
 import { Icon } from './Icon';
 import { colors } from '../theme/colors';
@@ -32,6 +33,15 @@ export function CommentComposer({
 }: Props) {
   const hasText = !!value.trim();
   const canSend = hasText && !pending;
+  const inputRef = useRef<TextInput>(null);
+
+  // Android: `autoFocus` nativo falha em tela recém-empurrada (o teclado não abre) —
+  // foca via ref DEPOIS da transição. iOS usa o autoFocus nativo normal.
+  useEffect(() => {
+    if (!autoFocus || Platform.OS !== 'android') return;
+    const t = setTimeout(() => inputRef.current?.focus(), 400);
+    return () => clearTimeout(t);
+  }, [autoFocus]);
 
   const MediaIcon = ({ name, kind }: { name: 'image' | 'sticker' | 'expand'; kind: 'image' | 'sticker' | 'expand' }) => (
     <Pressable onPress={() => onAttach?.(kind)} hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
@@ -58,13 +68,14 @@ export function CommentComposer({
       >
         <Avatar name={avatarName} uri={avatarUri} size="sm" />
         <TextInput
+          ref={inputRef}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
           placeholderTextColor={colors.ink[400]}
           className="flex-1 text-ink-900 py-2"
           multiline
-          autoFocus={autoFocus}
+          autoFocus={autoFocus && Platform.OS === 'ios'}
           onSubmitEditing={onSend}
           returnKeyType="send"
           blurOnSubmit

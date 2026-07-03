@@ -55,7 +55,19 @@ export async function registerPush(): Promise<void> {
     const projectId = easProjectId();
     if (!projectId) { debug('sem projectId (eas init) — sem registro'); return; }
 
-    const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
+    // FCM às vezes responde SERVICE_NOT_AVAILABLE logo após instalar/conceder
+    // permissão (Play Services ainda "acordando") → tenta de novo com backoff.
+    let token: string | null = null;
+    for (let attempt = 1; attempt <= 3 && !token; attempt++) {
+      try {
+        token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+      } catch (e) {
+        debug(`getExpoPushToken falhou (tentativa ${attempt}/3):`, e instanceof Error ? e.message : e);
+        if (attempt < 3) await new Promise((r) => setTimeout(r, attempt * 8000));
+      }
+    }
+    if (!token) return;
+
     currentToken = token;
     await api.post('/web/notifications/push-token', { token, platform: Platform.OS });
     debug('token registrado:', token.slice(0, 28) + '…');
