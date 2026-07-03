@@ -209,12 +209,14 @@ export function useFeed() {
 export function useCreatePost() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { content: string; category: PostCategory; media?: { type: 'IMAGE' | 'VIDEO'; path: string }[] }) => {
+    mutationFn: async (input: { content: string; category: PostCategory; groupId?: string; media?: { type: 'IMAGE' | 'VIDEO'; path: string }[] }) => {
       if (config.mock.feed) return { id: 'mock', status: 'PENDING' };
       return api.post<{ id: string; status: string }>('/web/posts', input);
     },
-    onSuccess: () => {
-      if (!config.mock.feed) qc.invalidateQueries({ queryKey: ['feed'] });
+    onSuccess: (_d, vars) => {
+      if (config.mock.feed) return;
+      void qc.invalidateQueries({ queryKey: ['feed'] });
+      if (vars.groupId) void qc.invalidateQueries({ queryKey: ['group-posts', vars.groupId] });
     },
   });
 }

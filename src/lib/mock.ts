@@ -136,11 +136,11 @@ export const mockComments: Record<string, Comment[]> = {
 };
 
 export const mockGroups: Group[] = [
-  { id: 'g1', name: 'Empresários do Varejo', segment: 'Varejo', city: null, membersCount: 1240, description: 'Donos de loja física e online trocando estratégia de venda, estoque e operação.', icon: 'bag', joined: true },
-  { id: 'g2', name: 'Empresários de Fortaleza', segment: 'Regional', city: 'Fortaleza · CE', membersCount: 860, description: 'Networking local: parcerias, fornecedores e eventos na cidade.', icon: 'location', joined: false },
-  { id: 'g3', name: 'Gestão Financeira', segment: 'Financeiro', city: null, membersCount: 2010, description: 'Fluxo de caixa, precificação, impostos e controle financeiro na prática.', icon: 'wallet', joined: false },
-  { id: 'g4', name: 'Marketing e Vendas', segment: 'Comercial', city: null, membersCount: 3150, description: 'Aquisição, funil, tráfego e processo comercial para PMEs.', icon: 'chart', joined: true },
-  { id: 'g5', name: 'Donos de Agência', segment: 'Serviços', city: null, membersCount: 540, description: 'Gestão de agência: contratos, time, escopo e retenção de cliente.', icon: 'work', joined: false },
+  { id: 'g1', name: 'Empresários do Varejo', segment: 'Varejo', city: null, memberCount: 1240, description: 'Donos de loja física e online trocando estratégia de venda, estoque e operação.', icon: 'bag', joined: true },
+  { id: 'g2', name: 'Empresários de Fortaleza', segment: 'Regional', city: 'Fortaleza · CE', memberCount: 860, description: 'Networking local: parcerias, fornecedores e eventos na cidade.', icon: 'location', joined: false },
+  { id: 'g3', name: 'Gestão Financeira', segment: 'Financeiro', city: null, memberCount: 2010, description: 'Fluxo de caixa, precificação, impostos e controle financeiro na prática.', icon: 'wallet', joined: false },
+  { id: 'g4', name: 'Marketing e Vendas', segment: 'Comercial', city: null, memberCount: 3150, description: 'Aquisição, funil, tráfego e processo comercial para PMEs.', icon: 'chart', joined: true },
+  { id: 'g5', name: 'Donos de Agência', segment: 'Serviços', city: null, memberCount: 540, description: 'Gestão de agência: contratos, time, escopo e retenção de cliente.', icon: 'work', joined: false },
 ];
 
 export const mockGroupPosts: Record<string, FeedPost[]> = {

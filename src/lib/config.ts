@@ -41,9 +41,8 @@ export const config = {
   apiUrl,
   transportSecret: process.env.EXPO_PUBLIC_TRANSPORT_SECRET ?? extra.transportSecret ?? 'change-me-transport',
   /**
-   * Mock POR DOMÍNIO. Backend pronto = auth/feed/diagnostics/opportunities/
-   * comments/profile (real). groups ainda não existe no back → segue mock;
-   * troque o `true` por `all` quando o back tiver o módulo.
+   * Mock POR DOMÍNIO. Backend pronto p/ TODOS os domínios abaixo (real).
+   * EXPO_PUBLIC_MOCK=1 força tudo mock (offline total).
    */
   mock: {
     auth: all,
@@ -53,6 +52,6 @@ export const config = {
     comments: all,
     profile: all,
     notifications: all,
-    groups: true,
+    groups: all,
   },
 };

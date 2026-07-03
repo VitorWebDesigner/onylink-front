@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '../../components/Avatar';
@@ -7,9 +8,27 @@ import { Button } from '../../components/Button';
 import { Icon, type IconName } from '../../components/Icon';
 import { EmptyState } from '../../components/EmptyState';
 import { colors } from '../../theme/colors';
-import { PRESSED_OPACITY } from '../../theme/tokens';
+import { HIT_SLOP, PRESSED_OPACITY } from '../../theme/tokens';
 import { timeAgo } from '../../lib/time';
 import { useGroups, useToggleJoin } from '../../features/groups/hooks';
+import { useMe } from '../../features/users/hooks';
+import type { Group } from '../../features/groups/types';
+
+/** Círculo do grupo: capa, ícone (mock) ou inicial. */
+function GroupCircle({ g, size = 48 }: { g: Group; size?: number }) {
+  if (g.coverPath) {
+    return <Image source={{ uri: g.coverPath }} style={{ width: size, height: size, borderRadius: size / 2 }} contentFit="cover" />;
+  }
+  return (
+    <View style={{ width: size, height: size, borderRadius: size / 2 }} className="bg-accent-50 items-center justify-center">
+      {g.icon ? (
+        <Icon name={g.icon as IconName} size={size / 2} color={colors.brand[500]} />
+      ) : (
+        <Text className="text-brand-500 font-bold" style={{ fontSize: size * 0.4 }}>{g.name.trim()[0]?.toUpperCase() ?? '?'}</Text>
+      )}
+    </View>
+  );
+}
 
 type Seg = 'chats' | 'groups';
 
@@ -43,12 +62,19 @@ export default function Messages() {
   const router = useRouter();
   const [seg, setSeg] = useState<Seg>('chats');
   const { data: groups } = useGroups();
+  const { data: me } = useMe();
   const toggleJoin = useToggleJoin();
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
-      <View className="px-4 py-3">
+      <View className="px-4 py-3 flex-row items-center justify-between">
         <Text className="text-2xl font-extrabold text-ink-900">Mensagens</Text>
+        {/* criar grupo: ADMIN ou conta profissional (gate espelhado no back) */}
+        {seg === 'groups' && me?.professional ? (
+          <Pressable onPress={() => router.push('/group/new')} hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
+            <Icon name="plus" set="light" size={26} color={colors.brand[500]} />
+          </Pressable>
+        ) : null}
       </View>
       <Segment value={seg} onChange={setSeg} />
 
@@ -81,13 +107,11 @@ export default function Messages() {
               style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
               className="flex-row items-center gap-3 px-4 py-4 border-b border-surface-border"
             >
-              <View className="w-12 h-12 rounded-full bg-accent-50 items-center justify-center">
-                <Icon name={item.icon as IconName} size={24} color={colors.brand[500]} />
-              </View>
+              <GroupCircle g={item} />
               <View className="flex-1">
                 <Text className="text-ink-900 font-semibold" numberOfLines={1}>{item.name}</Text>
                 <Text className="text-ink-500 text-[13px]" numberOfLines={1}>
-                  {item.segment}{item.city ? ` · ${item.city}` : ''} · {item.membersCount.toLocaleString('pt-BR')} membros
+                  {[item.segment, item.city].filter(Boolean).join(' · ')}{item.segment || item.city ? ' · ' : ''}{item.memberCount.toLocaleString('pt-BR')} membros
                 </Text>
               </View>
               <Button title={item.joined ? 'Sair' : 'Entrar'} variant={item.joined ? 'secondary' : 'accent'} size="sm" onPress={() => toggleJoin.mutate({ id: item.id, joined: item.joined })} />

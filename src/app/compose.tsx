@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import { Image } from 'expo-image';
 import { BlurView } from 'expo-blur';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../components/Button';
 import { Chip } from '../components/Chip';
@@ -48,6 +48,8 @@ function VideoThumb({ uri }: { uri: string }) {
 export default function Compose() {
   const router = useRouter();
   const toast = useToast();
+  // publicar DENTRO de um grupo (vindo da tela do grupo)
+  const { groupId, groupName } = useLocalSearchParams<{ groupId?: string; groupName?: string }>();
   const user = useAuth((s) => s.user);
   const create = useCreatePost();
   const [category, setCategory] = useState<PostCategory | null>(null);
@@ -169,6 +171,7 @@ export default function Compose() {
       await create.mutateAsync({
         content: content.trim(),
         category,
+        groupId: groupId || undefined,
         media: media.filter((m) => m.status === 'ready' && m.path).map((m) => ({ type: m.type, path: m.path! })),
       });
       toast.success('Publicado!');
@@ -189,6 +192,14 @@ export default function Compose() {
       {/* teclado aberto → footer (contador + Postar) sobe junto e fica visível acima dele */}
       <View style={{ flex: 1, paddingBottom: kbPad }}>
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }} keyboardShouldPersistTaps="handled">
+        {/* publicando dentro de um grupo */}
+        {groupId && groupName ? (
+          <View className="flex-row items-center gap-2 self-start rounded-pill px-3 py-1.5 bg-accent-50">
+            <Icon name="groups" set="light" size={15} color={colors.brand[500]} />
+            <Text className="text-brand-500 text-[13px] font-semibold" numberOfLines={1}>Publicando em {groupName}</Text>
+          </View>
+        ) : null}
+
         <View className="flex-row gap-3">
           <Avatar name={user?.name} size="md" />
           <View className="flex-1 gap-2">
