@@ -25,6 +25,10 @@ interface Props {
   onOpen?: (post: FeedPost) => void;
   /** Tocar no AVATAR ou NOME do autor → perfil dele (sem isso, cai no onOpen). */
   onOpenAuthor?: (post: FeedPost) => void;
+  /** Tocar no ícone de COMENTAR → abrir já com o composer focado (sem isso, cai no onOpen). */
+  onComment?: (post: FeedPost) => void;
+  /** Perfil de um usuário QUALQUER do card (ex.: autor do comentário-destaque). */
+  onOpenUser?: (userId: string) => void;
   /** Reação no comentário-destaque inline (curtir/insight/repost/enviar). */
   onCommentReact?: (postId: string, commentId: string, kind: CommentReactionKind, active: boolean) => void;
   /** Esconde o comentário-destaque inline (ex.: na tela de detalhe, onde ele já é listado). */
@@ -75,9 +79,10 @@ function FollowPill({ followed, onPress }: { followed: boolean; onPress: () => v
  * ao post por uma linha de thread que vai do **avatar do postador ao avatar de
  * quem comentou** — cada um com sua própria barra de reações embaixo.
  */
-export function PostCard({ post, onToggleInsight, onToggleLike, onToggleRepost, onToggleShare, onOpen, onOpenAuthor, onCommentReact, hideTopComment, onToggleFollow, isAuthor, hideMenu, onMenu, detail }: Props) {
+export function PostCard({ post, onToggleInsight, onToggleLike, onToggleRepost, onToggleShare, onOpen, onOpenAuthor, onComment, onOpenUser, onCommentReact, hideTopComment, onToggleFollow, isAuthor, hideMenu, onMenu, detail }: Props) {
   const tc = hideTopComment ? null : post.topComment;
   const openAuthor = onOpenAuthor ?? onOpen; // avatar/nome → perfil (fallback: abre o post)
+  const comment = onComment ?? onOpen; // comentar → abre focado (fallback: abre o post)
   const showFollow = !!onToggleFollow && !isAuthor;
   const mediaViewer = useMediaViewer();
   const reactionPicker = useReactionPicker();
@@ -95,6 +100,7 @@ export function PostCard({ post, onToggleInsight, onToggleLike, onToggleRepost, 
       onShare: () => onToggleShare?.(post),
       onComment: () => onOpen?.(post),
       onFollow: onToggleFollow ? () => onToggleFollow(post) : undefined,
+      onAuthor: onOpenAuthor ? () => onOpenAuthor(post) : undefined,
       isAuthor,
     });
   const doubleTapReact = () =>
@@ -104,7 +110,7 @@ export function PostCard({ post, onToggleInsight, onToggleLike, onToggleRepost, 
     <View className="flex-row items-center gap-6 pt-1.5">
       <AnimatedReaction icon="insight" active={post.insighted} activeColor={colors.action.insight} count={post.insightCount} onPress={onToggleInsight ? () => onToggleInsight(post) : undefined} />
       <AnimatedReaction icon="heart" active={post.liked} activeColor={colors.action.like} count={post.likeCount} onPress={onToggleLike ? () => onToggleLike(post) : undefined} />
-      <AnimatedReaction icon="comment" active={post.commentCount > 0} activeColor={colors.action.comment} count={post.commentCount} onPress={onOpen ? () => onOpen(post) : undefined} />
+      <AnimatedReaction icon="comment" active={post.commentCount > 0} activeColor={colors.action.comment} count={post.commentCount} onPress={comment ? () => comment(post) : undefined} />
       <AnimatedReaction icon="repost" active={post.reposted} activeColor={colors.action.repost} count={post.repostCount} onPress={onToggleRepost ? () => onToggleRepost(post) : undefined} />
       <AnimatedReaction icon="send" active={post.shared} activeColor={colors.action.send} count={post.shareCount} onPress={onToggleShare ? () => onToggleShare(post) : undefined} />
     </View>
@@ -191,11 +197,16 @@ export function PostCard({ post, onToggleInsight, onToggleLike, onToggleRepost, 
           <View style={{ width: 40, alignItems: 'center' }} className="relative">
             {/* ponte da linha: do fim do post até o topo deste avatar */}
             <View style={{ position: 'absolute', left: MD_CENTER - 1, top: -12, width: 2, height: 12, backgroundColor: THREAD_LINE }} />
-            <Avatar name={tc.authorName} size="sm" />
+            {/* avatar do comentarista → perfil dele */}
+            <Pressable onPress={onOpenUser && tc.authorId ? () => onOpenUser(tc.authorId!) : undefined} hitSlop={6} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
+              <Avatar name={tc.authorName} size="sm" />
+            </Pressable>
           </View>
 
           <Pressable onPress={onOpen ? () => onOpen(post) : undefined} style={({ pressed }) => ({ opacity: pressed && onOpen ? 0.96 : 1 })} className="flex-1">
-            <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{tc.authorName}</Text>
+            <Pressable onPress={onOpenUser && tc.authorId ? () => onOpenUser(tc.authorId!) : undefined} hitSlop={6} className="self-start" style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
+              <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{tc.authorName}</Text>
+            </Pressable>
             <Text className="text-ink-700 leading-5 mt-0.5">{tc.content}</Text>
             <View className="flex-row items-center gap-6 pt-1.5">
               <AnimatedReaction icon="insight" active={tc.insighted} activeColor={colors.action.insight} count={tc.insightCount} size={18} fontSize={13} onPress={onCommentReact ? () => onCommentReact(post.id, tc.id, 'insight', tc.insighted) : undefined} />

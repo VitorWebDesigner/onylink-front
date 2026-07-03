@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Keyboard, LayoutAnimation, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { BlurView } from 'expo-blur';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../components/Button';
 import { Chip } from '../components/Chip';
 import { Avatar } from '../components/Avatar';
@@ -20,6 +20,7 @@ import { pickVideos, uploadVideo } from '../lib/video';
 import { useAuth } from '../store/auth';
 import { useCapture } from '../store/capture';
 import { useCreatePost } from '../features/feed/hooks';
+import { useKeyboardPadding } from '../lib/keyboard';
 import { CATEGORIES, type PostCategory } from '../features/feed/types';
 
 const MAX_MEDIA = 6;
@@ -47,7 +48,6 @@ function VideoThumb({ uri }: { uri: string }) {
 export default function Compose() {
   const router = useRouter();
   const toast = useToast();
-  const insets = useSafeAreaInsets();
   const user = useAuth((s) => s.user);
   const create = useCreatePost();
   const [category, setCategory] = useState<PostCategory | null>(null);
@@ -59,23 +59,8 @@ export default function Compose() {
   const stripRef = useRef<View>(null);
   const [stripLeft, setStripLeft] = useState<number | null>(null); // x da fileira na tela (full-bleed à esquerda)
 
-  // Footer acima do teclado. KeyboardAvoidingView NÃO serve aqui: dentro de tela
-  // apresentada como modal nativo (pageSheet) ele mede o próprio frame em coords da
-  // sheet e o teclado em coords da TELA → padding menor que o necessário. Padding
-  // manual com a altura real do teclado (menos o safe inset que o SafeAreaView já dá).
-  const [kbHeight, setKbHeight] = useState(0);
-  useEffect(() => {
-    if (Platform.OS !== 'ios') return; // Android: adjustResize já levanta o footer
-    const show = Keyboard.addListener('keyboardWillShow', (e) => {
-      LayoutAnimation.configureNext({ duration: e.duration || 250, update: { type: 'keyboard' } });
-      setKbHeight(e.endCoordinates.height);
-    });
-    const hide = Keyboard.addListener('keyboardWillHide', (e) => {
-      LayoutAnimation.configureNext({ duration: e.duration || 250, update: { type: 'keyboard' } });
-      setKbHeight(0);
-    });
-    return () => { show.remove(); hide.remove(); };
-  }, []);
+  // Footer acima do teclado nos DOIS SOs (hook compartilhado — ver lib/keyboard.ts).
+  const kbPad = useKeyboardPadding();
   const timers = useRef<Record<string, ReturnType<typeof setInterval>>>({});
   const mountedRef = useRef(true);
   const removedRef = useRef<Set<string>>(new Set()); // ids removidos → não mostrar erro deles
@@ -202,7 +187,7 @@ export default function Compose() {
       </View>
 
       {/* teclado aberto → footer (contador + Postar) sobe junto e fica visível acima dele */}
-      <View style={{ flex: 1, paddingBottom: Math.max(0, kbHeight - insets.bottom) }}>
+      <View style={{ flex: 1, paddingBottom: kbPad }}>
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }} keyboardShouldPersistTaps="handled">
         <View className="flex-row gap-3">
           <Avatar name={user?.name} size="md" />

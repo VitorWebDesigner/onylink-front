@@ -16,6 +16,8 @@ interface Props {
   onCancelReply?: () => void;
   /** Anexos (imagem/sticker/gif/expandir) — futuro; screens podem exibir um toast. */
   onAttach?: (kind: 'image' | 'sticker' | 'gif' | 'expand') => void;
+  /** Abre já com o teclado (fluxo "tocar em comentar"). */
+  autoFocus?: boolean;
 }
 
 /**
@@ -26,7 +28,7 @@ interface Props {
  */
 export function CommentComposer({
   value, onChangeText, onSend, pending, avatarName, avatarUri,
-  placeholder = 'Adicione um comentário...', replyingToName, onCancelReply, onAttach,
+  placeholder = 'Adicione um comentário...', replyingToName, onCancelReply, onAttach, autoFocus,
 }: Props) {
   const hasText = !!value.trim();
   const canSend = hasText && !pending;
@@ -62,6 +64,7 @@ export function CommentComposer({
           placeholderTextColor={colors.ink[400]}
           className="flex-1 text-ink-900 py-2"
           multiline
+          autoFocus={autoFocus}
           onSubmitEditing={onSend}
           returnKeyType="send"
           blurOnSubmit

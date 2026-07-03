@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +16,7 @@ import { UFS, SEGMENTS, fetchCities } from '../../lib/br';
 import { useAuth } from '../../store/auth';
 import { useMe, useUpdateProfile, type ProfileLink } from '../../features/users/hooks';
 import { useSearchUsers } from '../../features/search/hooks';
+import { useKeyboardPadding } from '../../lib/keyboard';
 
 const BIO_MAX = 200;
 const MAX_LINKS = 3;
@@ -55,6 +56,7 @@ export default function EditProfile() {
   const updateUser = useAuth((s) => s.updateUser);
   const { data: profile } = useMe();
   const save = useUpdateProfile();
+  const kbPad = useKeyboardPadding();
 
   const [name, setName] = useState('');
   const [roleTitle, setRoleTitle] = useState('');
@@ -210,7 +212,7 @@ export default function EditProfile() {
         <Text className="text-ink-900 font-semibold text-base">Editar perfil</Text>
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={{ flex: 1, paddingBottom: kbPad }}>
         <ScrollView contentContainerStyle={{ paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
           {/* capa + avatar — MESMA disposição da tela de perfil (capa full-bleed,
               avatar sobreposto à esquerda) */}
@@ -361,7 +363,7 @@ export default function EditProfile() {
         <View className="px-4 py-3 border-t border-surface-border">
           <Button title="Salvar" variant="accent" onPress={onSave} disabled={busy} loading={save.isPending} />
         </View>
-      </KeyboardAvoidingView>
+      </View>
 
       {/* sheets de seleção */}
       <SelectSheet visible={sheet === 'uf'} onClose={() => setSheet(null)} title="Estado (UF)" options={[...UFS]} selected={uf} onSelect={(v) => void selectUf(v)} />

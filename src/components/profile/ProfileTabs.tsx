@@ -87,6 +87,8 @@ export function useProfileTabList(userId: string, tab: ProfileTab, opts?: { onPo
       onToggleFollow={(po) => { if (po.authorId) followFlow.start({ id: po.authorId, name: po.authorName, avatarPath: po.authorAvatar, followed: po.authorFollowed }); }}
       onOpen={(po) => router.push({ pathname: '/post/[id]', params: { id: po.id } })}
       onOpenAuthor={(po) => { if (po.authorId) router.push({ pathname: '/user/[id]', params: { id: po.authorId } }); }}
+      onComment={(po) => router.push({ pathname: '/post/[id]', params: { id: po.id, focus: '1' } })}
+      onOpenUser={(userId) => router.push({ pathname: '/user/[id]', params: { id: userId } })}
     />
   );
 
@@ -135,7 +137,11 @@ export function useProfileTabList(userId: string, tab: ProfileTab, opts?: { onPo
   );
 
   const renderOpp: ListRenderItem<Opportunity> = ({ item }) => (
-    <OpportunityCard opportunity={item} onOpen={(o) => router.push({ pathname: '/opportunity/[id]', params: { id: o.id } })} />
+    <OpportunityCard
+      opportunity={item}
+      onOpen={(o) => router.push({ pathname: '/opportunity/[id]', params: { id: o.id } })}
+      onOpenAuthor={(o) => { if (o.authorId) router.push({ pathname: '/user/[id]', params: { id: o.authorId } }); }}
+    />
   );
 
   return useMemo(() => {

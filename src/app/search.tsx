@@ -33,10 +33,14 @@ export default function Search() {
 
   const PostRow = ({ p }: { p: FeedPost }) => (
     <Pressable onPress={() => router.push({ pathname: '/post/[id]', params: { id: p.id } })} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })} className="flex-row gap-3 px-4 py-3 border-b border-surface-border">
-      <Avatar name={p.authorName} uri={p.authorAvatar} size="md" />
+      <Pressable onPress={p.authorId ? () => router.push({ pathname: '/user/[id]', params: { id: p.authorId! } }) : undefined} hitSlop={6} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
+        <Avatar name={p.authorName} uri={p.authorAvatar} size="md" />
+      </Pressable>
       <View className="flex-1">
         <View className="flex-row items-center gap-1.5">
-          <Text className="text-ink-900 font-semibold text-sm">{p.authorName}</Text>
+          <Pressable onPress={p.authorId ? () => router.push({ pathname: '/user/[id]', params: { id: p.authorId! } }) : undefined} hitSlop={6} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
+            <Text className="text-ink-900 font-semibold text-sm">{p.authorName}</Text>
+          </Pressable>
           <Text className="text-ink-400 text-[13px]">· {timeAgo(p.createdAt)}</Text>
         </View>
         <Text className="text-ink-700 leading-5" numberOfLines={2}>{p.content}</Text>
@@ -46,7 +50,11 @@ export default function Search() {
 
   function UserRow({ u }: { u: SearchUser }) {
     return (
-      <View className="flex-row items-center gap-3 px-4 py-3 border-b border-surface-border">
+      <Pressable
+        onPress={() => router.push({ pathname: '/user/[id]', params: { id: u.id } })}
+        style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
+        className="flex-row items-center gap-3 px-4 py-3 border-b border-surface-border"
+      >
         <Avatar name={u.name} uri={u.avatarPath} size="lg" />
         <View className="flex-1">
           <Text className="text-ink-900 font-semibold text-sm">@{u.handle}</Text>
@@ -60,7 +68,7 @@ export default function Search() {
           size="sm"
           onPress={() => follow.mutate({ userId: u.id, following: u.followed })}
         />
-      </View>
+      </Pressable>
     );
   }
 

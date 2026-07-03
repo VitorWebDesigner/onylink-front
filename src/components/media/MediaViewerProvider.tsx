@@ -33,6 +33,8 @@ export interface ViewerOpts {
   onComment: () => void;
   /** Seguir/deixar de seguir o autor (canto inferior esq. no vídeo em tela cheia). */
   onFollow?: () => void;
+  /** Tocar no avatar/nome do autor → perfil (o viewer fecha antes de navegar). */
+  onAuthor?: () => void;
   /** Post do próprio usuário → esconde "Seguir". */
   isAuthor?: boolean;
 }
@@ -164,6 +166,7 @@ export function MediaViewerProvider({ children }: { children: ReactNode }) {
                   onReact={react}
                   onComment={() => setCommentsPostId(opts.post.id)}
                   onFollow={opts.onFollow}
+                  onAuthor={opts.onAuthor ? () => { close(); opts.onAuthor!(); } : undefined}
                   isAuthor={opts.isAuthor}
                   onClose={close}
                 />

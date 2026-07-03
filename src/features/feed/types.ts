@@ -11,6 +11,7 @@ export type PostCategory = (typeof CATEGORIES)[number];
  *  Mini-post: carrega contadores e o estado do leitor pra barra funcionar no feed. */
 export interface TopComment {
   id: string;
+  authorId?: string | null;
   authorName: string;
   content: string;
   likeCount: number;
@@ -83,6 +84,7 @@ export interface RawFeedRow {
   media?: MediaItem[];
   top_comment_id?: string | null;
   top_comment_content?: string | null;
+  top_comment_author_id?: string | null;
   top_comment_author?: string | null;
   top_comment_like_count?: number | null;
   top_comment_insight_count?: number | null;
@@ -121,6 +123,7 @@ export function toFeedPost(r: RawFeedRow): FeedPost {
     topComment: r.top_comment_id
       ? {
           id: r.top_comment_id,
+          authorId: r.top_comment_author_id ?? null,
           authorName: r.top_comment_author ?? '',
           content: r.top_comment_content ?? '',
           likeCount: r.top_comment_like_count ?? 0,

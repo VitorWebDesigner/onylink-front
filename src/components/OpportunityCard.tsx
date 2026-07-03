@@ -11,6 +11,8 @@ import { KIND_META, type Opportunity } from '../features/opportunities/types';
 interface Props {
   opportunity: Opportunity;
   onOpen?: (o: Opportunity) => void;
+  /** Tocar no avatar/nome do autor → perfil dele. */
+  onOpenAuthor?: (o: Opportunity) => void;
   onToggleInsight?: (o: Opportunity) => void;
   onToggleLike?: (o: Opportunity) => void;
   onRepost?: (o: Opportunity) => void;
@@ -18,19 +20,24 @@ interface Props {
 }
 
 /** Card de oportunidade — mesmas ações de um post (reais) + clicável para o detalhe. */
-export function OpportunityCard({ opportunity: o, onOpen, onToggleInsight, onToggleLike, onRepost, onSend }: Props) {
+export function OpportunityCard({ opportunity: o, onOpen, onOpenAuthor, onToggleInsight, onToggleLike, onRepost, onSend }: Props) {
   const meta = KIND_META[o.kind];
   const where = [o.city, o.segment].filter(Boolean).join(' · ');
+  const openAuthor = onOpenAuthor && o.authorId ? () => onOpenAuthor(o) : undefined;
   return (
     <Pressable
       onPress={() => onOpen?.(o)}
       style={({ pressed }) => ({ opacity: pressed && onOpen ? 0.96 : 1 })}
       className="flex-row gap-3 px-4 py-3 border-b border-surface-border bg-surface"
     >
-      <Avatar name={o.authorName} size="md" />
+      <Pressable onPress={openAuthor} hitSlop={6} style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}>
+        <Avatar name={o.authorName} size="md" />
+      </Pressable>
       <View className="flex-1 gap-1">
         <View className="flex-row items-center gap-1.5">
-          <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{o.authorName}</Text>
+          <Pressable onPress={openAuthor} hitSlop={6} className="shrink" style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}>
+            <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{o.authorName}</Text>
+          </Pressable>
           <Text className="text-ink-400 text-[13px]">· {timeAgo(o.createdAt)}</Text>
           <View className="flex-1" />
           <Badge label={meta.label} icon={meta.icon} tone="accent" />

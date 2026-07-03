@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Dimensions, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { runOnJS, useAnimatedRef, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { colors } from '../../theme/colors';
 import { HIT_SLOP, PRESSED_OPACITY } from '../../theme/tokens';
 import { useToast } from '../feedback/toast';
 import { useAuth } from '../../store/auth';
+import { useKeyboardPadding } from '../../lib/keyboard';
 import {
   useAddComment, useComments,
   useToggleCommentInsight, useToggleCommentLike, useToggleCommentRepost, useToggleCommentShare,
@@ -39,6 +40,7 @@ export function CommentsSheet({ postId, onClose }: { postId: string; onClose: ()
   const shareComment = useToggleCommentShare(postId);
   const [text, setText] = useState('');
   const [replyTo, setReplyTo] = useState<CommentNode | null>(null);
+  const kbPad = useKeyboardPadding(); // composer acima do teclado nos DOIS SOs
 
   const count = comments?.length ?? 0;
   const height = SCREEN_H - insets.top - 40;
@@ -112,7 +114,7 @@ export function CommentsSheet({ postId, onClose }: { postId: string; onClose: ()
             </Pressable>
           </View>
 
-          <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View className="flex-1" style={{ paddingBottom: kbPad }}>
             <Animated.ScrollView ref={scrollRef} onScroll={onScroll} scrollEventThrottle={16} bounces={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16, paddingBottom: 8 }}>
               <CommentsSection
                 comments={comments ?? []}
@@ -134,8 +136,9 @@ export function CommentsSheet({ postId, onClose }: { postId: string; onClose: ()
               replyingToName={replyTo?.authorName ?? null}
               onCancelReply={() => setReplyTo(null)}
               onAttach={() => toast.info('Mídia no comentário em breve.')}
+              autoFocus
             />
-          </KeyboardAvoidingView>
+          </View>
         </Animated.View>
         </GestureDetector>
       </View>

@@ -34,6 +34,8 @@ function easProjectId(): string | undefined {
 }
 
 /** Registra o aparelho para push. Chame após autenticar. */
+const debug = (...args: unknown[]) => { if (__DEV__) console.log('[push]', ...args); };
+
 export async function registerPush(): Promise<void> {
   try {
     if (config.mock.notifications || !Device.isDevice) return;
@@ -48,16 +50,18 @@ export async function registerPush(): Promise<void> {
 
     const perm = await Notifications.getPermissionsAsync();
     const granted = perm.granted || (await Notifications.requestPermissionsAsync()).granted;
-    if (!granted) return;
+    if (!granted) { debug('permissão de notificação NEGADA — sem registro'); return; }
 
     const projectId = easProjectId();
-    if (!projectId) return; // ainda sem `eas init` → não há como gerar token
+    if (!projectId) { debug('sem projectId (eas init) — sem registro'); return; }
 
     const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
     currentToken = token;
     await api.post('/web/notifications/push-token', { token, platform: Platform.OS });
-  } catch {
-    // best-effort: Expo Go / permissão negada / sem rede — nunca quebra o login
+    debug('token registrado:', token.slice(0, 28) + '…');
+  } catch (e) {
+    // best-effort: Expo Go / sem rede — nunca quebra o login. Em dev, mostra o motivo.
+    debug('falha ao registrar:', e instanceof Error ? e.message : e);
   }
 }
 

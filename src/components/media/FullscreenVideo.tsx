@@ -39,6 +39,8 @@ interface Props {
   onReact: (kind: 'insight' | 'like' | 'repost' | 'share') => void;
   onComment: () => void;
   onFollow?: () => void;
+  /** Tocar no avatar/nome do autor → perfil (quem fecha o viewer é o provider). */
+  onAuthor?: () => void;
   isAuthor?: boolean;
   onClose: () => void;
 }
@@ -55,7 +57,7 @@ interface Props {
  * e o preenchimento roda na thread nativa (shared value) → sem re-render a cada frame,
  * e onde o dedo solta é EXATAMENTE onde o vídeo busca.
  */
-export function FullscreenVideo({ item, post, r, insetTop, insetBottom, onReact, onComment, onFollow, isAuthor, onClose }: Props) {
+export function FullscreenVideo({ item, post, r, insetTop, insetBottom, onReact, onComment, onFollow, onAuthor, isAuthor, onClose }: Props) {
   // player COMPARTILHADO com o feed → MESMA instância, já bufferizada e no ponto certo.
   const url = absoluteMediaUrl(item.url);
   const player = useSharedVideoPlayer(url);
@@ -259,8 +261,10 @@ export function FullscreenVideo({ item, post, r, insetTop, insetBottom, onReact,
       {/* infos do autor + VIEWS — canto inferior esquerdo (acima dos controles) */}
       <View style={{ position: 'absolute', left: 14, right: 84, bottom: insetBottom + 64 }}>
         <View className="flex-row items-center gap-2.5">
-          <Avatar name={post.authorName} uri={post.authorAvatar} size="sm" />
-          <Text className="text-white font-bold text-sm shrink" numberOfLines={1}>{post.authorName}</Text>
+          <Pressable onPress={onAuthor} hitSlop={6} className="flex-row items-center gap-2.5 shrink" style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
+            <Avatar name={post.authorName} uri={post.authorAvatar} size="sm" />
+            <Text className="text-white font-bold text-sm shrink" numberOfLines={1}>{post.authorName}</Text>
+          </Pressable>
           {!isAuthor && onFollow ? (
             <Pressable
               onPress={handleFollow}

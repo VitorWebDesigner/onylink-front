@@ -65,6 +65,7 @@ export default function Opportunities() {
                   ? router.push({ pathname: '/opportunity/applications/[id]', params: { id: o.id } })
                   : router.push({ pathname: '/opportunity/[id]', params: { id: o.id } })
               }
+              onOpenAuthor={(o) => { if (o.authorId) router.push({ pathname: '/user/[id]', params: { id: o.authorId } }); }}
               onToggleInsight={(o) => toggleInsight.mutate({ id: o.id, insighted: o.insighted })}
               onToggleLike={(o) => toggleLike.mutate({ id: o.id, liked: o.liked })}
               onRepost={() => toast.success('Oportunidade repostada no seu perfil.')}

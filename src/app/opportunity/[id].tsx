@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Avatar } from '../../components/Avatar';
@@ -23,6 +23,7 @@ import {
 } from '../../features/opportunities/hooks';
 import { KIND_META } from '../../features/opportunities/types';
 import { useAuth } from '../../store/auth';
+import { useKeyboardPadding } from '../../lib/keyboard';
 
 export default function OpportunityDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -42,6 +43,7 @@ export default function OpportunityDetail() {
   const toggleSub = useToggleOppSubscription();
   const [text, setText] = useState('');
   const [replyTo, setReplyTo] = useState<CommentNode | null>(null);
+  const kbPad = useKeyboardPadding(); // composer acima do teclado nos DOIS SOs
 
   const count = comments?.length ?? 0;
 
@@ -86,7 +88,7 @@ export default function OpportunityDetail() {
       {!o ? (
         <View className="flex-1 items-center justify-center"><EmptyState icon="work" title="Oportunidade não encontrada" /></View>
       ) : (
-        <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View className="flex-1" style={{ paddingBottom: kbPad }}>
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16, paddingBottom: 24 }}>
             <View className="gap-3 pb-4 border-b border-surface-border mb-4">
               <View className="flex-row items-center justify-between">
@@ -94,7 +96,11 @@ export default function OpportunityDetail() {
                 <Text className="text-ink-400 text-micro">{timeAgo(o.createdAt)}</Text>
               </View>
               <Text className="text-ink-900 font-extrabold text-xl leading-6">{o.title}</Text>
-              <View className="flex-row items-center gap-2">
+              <Pressable
+                onPress={o.authorId ? () => router.push({ pathname: '/user/[id]', params: { id: o.authorId! } }) : undefined}
+                style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
+                className="flex-row items-center gap-2 self-start"
+              >
                 <Avatar name={o.authorName} size="sm" />
                 <View>
                   <Text className="text-ink-900 font-semibold text-sm">{o.authorName}</Text>
@@ -102,7 +108,7 @@ export default function OpportunityDetail() {
                     <Text className="text-ink-500 text-[13px]">{[o.city, o.segment].filter(Boolean).join(' · ')}</Text>
                   ) : null}
                 </View>
-              </View>
+              </Pressable>
               {o.description ? <Text className="text-ink-700 leading-6">{o.description}</Text> : null}
 
               <View className="flex-row items-center gap-6 py-1">
@@ -134,6 +140,7 @@ export default function OpportunityDetail() {
               onToggleRepost={(c) => { repostComment.mutate({ commentId: c.id, active: c.reposted }); if (!c.reposted) toast.success('Comentário repostado!'); }}
               onToggleShare={(c) => shareComment.mutate({ commentId: c.id, active: c.shared })}
               onReply={(c) => setReplyTo(c)}
+              onOpenUser={(userId) => router.push({ pathname: '/user/[id]', params: { id: userId } })}
             />
           </ScrollView>
 
@@ -148,7 +155,7 @@ export default function OpportunityDetail() {
             onCancelReply={() => setReplyTo(null)}
             onAttach={() => toast.info('Mídia no comentário em breve.')}
           />
-        </KeyboardAvoidingView>
+        </View>
       )}
     </SafeAreaView>
   );

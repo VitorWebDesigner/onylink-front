@@ -104,6 +104,7 @@ export function toOpportunity(r: RawOpportunityRow): Opportunity {
 
 export interface OpportunityComment {
   id: string;
+  authorId?: string | null;
   authorName: string;
   authorAvatar?: string | null;
   content: string;

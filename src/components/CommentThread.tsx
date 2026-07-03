@@ -10,6 +10,7 @@ import { timeAgo } from '../lib/time';
 /** Forma normalizada de um comentário (post ou oportunidade) — item 4. Mini-post: 5 ações. */
 export interface CommentNode {
   id: string;
+  authorId?: string | null;
   authorName: string;
   authorAvatar?: string | null;
   authorRoleTitle?: string | null;
@@ -34,6 +35,8 @@ interface Props {
   onToggleRepost: (c: CommentNode) => void;
   onToggleShare: (c: CommentNode) => void;
   onReply: (c: CommentNode) => void;
+  /** Tocar no avatar/nome do comentarista → perfil dele. */
+  onOpenUser?: (userId: string) => void;
   /** Limita quantos comentários de topo renderizam (revelação progressiva). */
   maxRoots?: number;
 }
@@ -44,11 +47,13 @@ const RADIUS = 9;     // raio da curva da linha de thread
 const REPLY_PT = 12;  // espaço acima de cada resposta (= pt-3), que a linha precisa cobrir
 
 /** Corpo de um comentário: header, texto e barra COMPLETA (insight · curtir · comentar · repostar · enviar). */
-function CommentBody({ c, onToggleLike, onToggleInsight, onToggleRepost, onToggleShare, onReply }: { c: CommentNode } & Pick<Props, 'onToggleLike' | 'onToggleInsight' | 'onToggleRepost' | 'onToggleShare' | 'onReply'>) {
+function CommentBody({ c, onToggleLike, onToggleInsight, onToggleRepost, onToggleShare, onReply, onOpenUser }: { c: CommentNode } & Pick<Props, 'onToggleLike' | 'onToggleInsight' | 'onToggleRepost' | 'onToggleShare' | 'onReply' | 'onOpenUser'>) {
   return (
     <View className="flex-1 gap-0.5">
       <View className="flex-row items-center gap-2">
-        <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{c.authorName}</Text>
+        <Pressable onPress={onOpenUser && c.authorId ? () => onOpenUser(c.authorId!) : undefined} hitSlop={6} className="shrink" style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
+          <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{c.authorName}</Text>
+        </Pressable>
         <Text className="text-ink-400 text-micro">{timeAgo(c.createdAt)}</Text>
         <View className="flex-1" />
         <Pressable hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })} className="w-6 h-6 rounded-full border border-surface-border items-center justify-center">
@@ -106,7 +111,7 @@ function Connector({ isLast }: { isLast: boolean }) {
   );
 }
 
-type Handlers = Pick<Props, 'onToggleLike' | 'onToggleInsight' | 'onToggleRepost' | 'onToggleShare' | 'onReply'>;
+type Handlers = Pick<Props, 'onToggleLike' | 'onToggleInsight' | 'onToggleRepost' | 'onToggleShare' | 'onReply' | 'onOpenUser'>;
 
 // Respostas de UM comentário colapsam só se houver MAIS que isso (tolerante — o
 // comentário primário sempre aparece; escondemos apenas excesso de respostas).
@@ -129,11 +134,13 @@ function CommentBranch({ node, childrenOf, countDesc, depth, h }: { node: Commen
     <View>
       <View className="flex-row gap-3">
         <View className="relative">
-          <Avatar name={node.authorName} uri={node.authorAvatar} size="sm" />
+          <Pressable onPress={h.onOpenUser && node.authorId ? () => h.onOpenUser!(node.authorId!) : undefined} hitSlop={6} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
+            <Avatar name={node.authorName} uri={node.authorAvatar} size="sm" />
+          </Pressable>
           {/* toco que desce do avatar deste comentário até a 1ª resposta (ou o "Ver respostas") */}
           {kids.length ? <View style={{ position: 'absolute', left: AV_CENTER - 1, top: 32, width: 2, bottom: 0, backgroundColor: LINE }} /> : null}
         </View>
-        <CommentBody c={node} onToggleLike={h.onToggleLike} onToggleInsight={h.onToggleInsight} onToggleRepost={h.onToggleRepost} onToggleShare={h.onToggleShare} onReply={h.onReply} />
+        <CommentBody c={node} onToggleLike={h.onToggleLike} onToggleInsight={h.onToggleInsight} onToggleRepost={h.onToggleRepost} onToggleShare={h.onToggleShare} onReply={h.onReply} onOpenUser={h.onOpenUser} />
       </View>
 
       {showKids ? (
@@ -170,7 +177,7 @@ function CommentBranch({ node, childrenOf, countDesc, depth, h }: { node: Commen
  * os aninha por `parent_id` de forma RECURSIVA — a linha de thread liga cada
  * resposta ao avatar do comentário que ela respondeu (não ao de topo).
  */
-export function CommentThread({ comments, onToggleLike, onToggleInsight, onToggleRepost, onToggleShare, onReply, maxRoots }: Props) {
+export function CommentThread({ comments, onToggleLike, onToggleInsight, onToggleRepost, onToggleShare, onReply, onOpenUser, maxRoots }: Props) {
   const byId = new Map(comments.map((c) => [c.id, c]));
   const childrenByParent = new Map<string, CommentNode[]>();
   for (const c of comments) {
@@ -187,7 +194,7 @@ export function CommentThread({ comments, onToggleLike, onToggleInsight, onToggl
   };
   const allRoots = comments.filter((c) => !c.parentId || !byId.has(c.parentId));
   const roots = maxRoots != null ? allRoots.slice(0, maxRoots) : allRoots;
-  const h: Handlers = { onToggleLike, onToggleInsight, onToggleRepost, onToggleShare, onReply };
+  const h: Handlers = { onToggleLike, onToggleInsight, onToggleRepost, onToggleShare, onReply, onOpenUser };
 
   return (
     <View className="gap-4">

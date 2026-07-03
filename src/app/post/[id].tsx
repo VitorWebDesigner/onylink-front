@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { PostCard } from '../../components/PostCard';
@@ -18,10 +18,11 @@ import {
   useToggleInsight, useToggleLike, useToggleRepost, useToggleShare,
 } from '../../features/feed/hooks';
 import { useFollowFlow } from '../../components/follow/FollowFlowProvider';
+import { useKeyboardPadding } from '../../lib/keyboard';
 import { useAddComment, useComments, useToggleCommentInsight, useToggleCommentLike, useToggleCommentRepost, useToggleCommentShare } from '../../features/comments/hooks';
 
 export default function PostDetail() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, focus } = useLocalSearchParams<{ id: string; focus?: string }>();
   const router = useRouter();
   const toast = useToast();
   const user = useAuth((s) => s.user);
@@ -41,6 +42,7 @@ export default function PostDetail() {
   const shareComment = useToggleCommentShare(id);
   const [text, setText] = useState('');
   const [replyTo, setReplyTo] = useState<CommentNode | null>(null);
+  const kbPad = useKeyboardPadding(); // sobe o composer nos DOIS SOs (Android edge-to-edge não redimensiona)
 
   const post = (feed ?? []).find((p) => p.id === id) ?? null;
   const count = comments?.length ?? 0;
@@ -91,7 +93,7 @@ export default function PostDetail() {
           <EmptyState icon="document" title="Publicação não encontrada" />
         </View>
       ) : (
-        <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View className="flex-1" style={{ paddingBottom: kbPad }}>
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 16 }}>
             <PostCard
               post={post}
@@ -115,6 +117,7 @@ export default function PostDetail() {
                 onToggleRepost={(c) => { repostComment.mutate({ commentId: c.id, active: c.reposted }); if (!c.reposted) toast.success('Comentário repostado!'); }}
                 onToggleShare={(c) => shareComment.mutate({ commentId: c.id, active: c.shared })}
                 onReply={(c) => setReplyTo(c)}
+                onOpenUser={(userId) => router.push({ pathname: '/user/[id]', params: { id: userId } })}
               />
             </View>
           </ScrollView>
@@ -129,8 +132,9 @@ export default function PostDetail() {
             replyingToName={replyTo?.authorName ?? null}
             onCancelReply={() => setReplyTo(null)}
             onAttach={() => toast.info('Mídia no comentário em breve.')}
+            autoFocus={focus === '1'}
           />
-        </KeyboardAvoidingView>
+        </View>
       )}
     </SafeAreaView>
   );

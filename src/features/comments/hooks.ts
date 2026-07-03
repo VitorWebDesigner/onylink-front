@@ -29,6 +29,7 @@ interface RawCommentRow {
 const toComment = (postId: string, r: RawCommentRow): Comment => ({
   id: r.id,
   postId,
+  authorId: r.author_id,
   authorName: r.author_name,
   authorAvatar: r.author_avatar ?? null,
   authorRoleTitle: null,

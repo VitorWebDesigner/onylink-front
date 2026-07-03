@@ -163,6 +163,7 @@ interface RawOppComment {
   id: string;
   content: string;
   created_at: string;
+  author_id?: string;
   author_name: string;
   author_avatar: string | null;
   parent_id: string | null;
@@ -178,6 +179,7 @@ interface RawOppComment {
 }
 const toOppComment = (r: RawOppComment): OpportunityComment => ({
   id: r.id,
+  authorId: r.author_id ?? null,
   authorName: r.author_name,
   authorAvatar: r.author_avatar ?? null,
   content: r.content,
