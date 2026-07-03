@@ -15,10 +15,11 @@ import { pickImages, uploadImage } from '../../lib/media';
 import { UFS, SEGMENTS, fetchCities } from '../../lib/br';
 import { useAuth } from '../../store/auth';
 import { useMe, useUpdateProfile, type ProfileLink } from '../../features/users/hooks';
+import { useSearchUsers } from '../../features/search/hooks';
 
 const BIO_MAX = 200;
-const MAX_LINKS = 5;
-const MAX_INTERESTS = 10;
+const MAX_LINKS = 3;
+const MAX_INTERESTS = 4;
 const normalizeUrl = (u: string) => (/^https?:\/\//i.test(u) ? u : `https://${u}`);
 
 /** Linha de SELEÇÃO (o usuário escolhe, não digita): valor + chevron → abre sheet. */
@@ -130,6 +131,10 @@ export default function EditProfile() {
     }
   }
 
+  // edição de link: tocar no lápis puxa o link pros inputs (e tira da lista);
+  // "Adicionar/Salvar link" devolve com os novos valores
+  const [editingLink, setEditingLink] = useState(false);
+
   function addLink() {
     const label = newLinkLabel.trim();
     const url = newLinkUrl.trim();
@@ -138,6 +143,25 @@ export default function EditProfile() {
     setLinks((l) => [...l, { label, url: normalizeUrl(url) }]);
     setNewLinkLabel('');
     setNewLinkUrl('');
+    setEditingLink(false);
+  }
+
+  function editLink(idx: number) {
+    const l = links[idx];
+    if (!l) return;
+    setNewLinkLabel(l.label);
+    setNewLinkUrl(l.url);
+    setLinks((arr) => arr.filter((_, i) => i !== idx));
+    setEditingLink(true);
+  }
+
+  // autocomplete de @menção na bio: digitou "@abc" no fim → lista usuários;
+  // tocar completa a menção com o @handle real
+  const mentionQuery = /@([a-z0-9_.]{2,})$/i.exec(bio)?.[1] ?? '';
+  const { data: mentionUsers } = useSearchUsers(mentionQuery);
+
+  function completeMention(handle: string) {
+    setBio((b) => b.replace(/@[a-z0-9_.]{2,}$/i, `@${handle} `).slice(0, BIO_MAX));
   }
 
   function addInterest() {
@@ -244,6 +268,26 @@ export default function EditProfile() {
                 style={{ minHeight: 96, textAlignVertical: 'top' }}
               />
               <Text className="text-ink-400 text-xs text-right">{bio.length}/{BIO_MAX}</Text>
+
+              {/* autocomplete de @menção: digitou @nome → lista pra confirmar/completar */}
+              {mentionQuery && mentionUsers?.length ? (
+                <View className="rounded-input border border-surface-border overflow-hidden">
+                  {mentionUsers.slice(0, 5).map((u) => (
+                    <Pressable
+                      key={u.id}
+                      onPress={() => completeMention(u.handle)}
+                      style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
+                      className="flex-row items-center gap-3 px-3 py-2.5 border-b border-surface-border bg-surface"
+                    >
+                      <Avatar name={u.name} uri={u.avatarPath} size="sm" />
+                      <View className="flex-1">
+                        <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{u.name}</Text>
+                        <Text className="text-ink-400 text-xs" numberOfLines={1}>@{u.handle}{u.roleTitle ? ` · ${u.roleTitle}` : ''}</Text>
+                      </View>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : null}
             </View>
 
             {/* links estruturados — aparecem abaixo da bio no perfil (Fase 4) */}
@@ -258,18 +302,22 @@ export default function EditProfile() {
                   <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{l.label}</Text>
                   <Text className="text-ink-500 text-xs" numberOfLines={1}>{l.url}</Text>
                 </View>
+                {/* lápis = editar (puxa pros campos abaixo) · × = excluir */}
+                <Pressable onPress={() => editLink(idx)} hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
+                  <Icon name="edit" set="light" size={18} color={colors.brand[500]} />
+                </Pressable>
                 <Pressable onPress={() => setLinks((arr) => arr.filter((_, i) => i !== idx))} hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
                   <Icon name="close" size={18} color={colors.ink[500]} />
                 </Pressable>
               </View>
             ))}
-            {links.length < MAX_LINKS ? (
+            {links.length < MAX_LINKS || editingLink ? (
               <View className="gap-3">
                 <View className="flex-row gap-3">
                   <View className="w-32"><Input value={newLinkLabel} onChangeText={setNewLinkLabel} placeholder="Nome" maxLength={40} /></View>
                   <View className="flex-1"><Input value={newLinkUrl} onChangeText={setNewLinkUrl} placeholder="suaempresa.com.br" keyboardType="url" autoCapitalize="none" maxLength={300} /></View>
                 </View>
-                <Button title="Adicionar link" variant="secondary" size="sm" onPress={addLink} />
+                <Button title={editingLink ? 'Salvar link' : 'Adicionar link'} variant="secondary" size="sm" onPress={addLink} />
               </View>
             ) : null}
 

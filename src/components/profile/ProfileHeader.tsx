@@ -21,21 +21,22 @@ function since(createdAt: string | null): string | null {
 
 const openUrl = (url: string) => { void Linking.openURL(/^https?:/i.test(url) ? url : `https://${url}`); };
 
-/** Bio com URLs e @MENÇÕES clicáveis (URL abre no navegador; @handle abre o perfil). */
+/** Bio com URLs e @MENÇÕES clicáveis (URL abre no navegador; @handle abre o perfil).
+ *  Linkifica também domínio SEM https:// (ex.: suaempresa.com.br). */
 function BioText({ text }: { text: string }) {
   const router = useRouter();
-  const parts = text.split(/(https?:\/\/\S+|www\.\S+|@[a-z0-9_.]+)/gi);
+  const parts = text.split(/(https?:\/\/\S+|www\.\S+|@[a-z0-9_.]+|\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?:\/\S*)?)/gi);
   return (
     <Text className="text-ink-700 leading-5 pt-2">
       {parts.map((part, i) => {
-        if (/^(https?:\/\/|www\.)/i.test(part)) {
+        if (part && /^(https?:\/\/|www\.)/i.test(part)) {
           return (
             <Text key={i} className="text-brand-500 font-semibold" suppressHighlighting onPress={() => openUrl(part)}>
               {part}
             </Text>
           );
         }
-        if (/^@[a-z0-9_.]+$/i.test(part)) {
+        if (part && /^@[a-z0-9_.]+$/i.test(part)) {
           // rota aceita handle: GET /web/users/:idOuHandle (a tela resolve o id real)
           return (
             <Text
@@ -44,6 +45,14 @@ function BioText({ text }: { text: string }) {
               suppressHighlighting
               onPress={() => router.push({ pathname: '/user/[id]', params: { id: part.slice(1).toLowerCase() } })}
             >
+              {part}
+            </Text>
+          );
+        }
+        // domínio nu (suaempresa.com.br) — openUrl prefixa https://
+        if (part && /^[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?:\/\S*)?$/i.test(part)) {
+          return (
+            <Text key={i} className="text-brand-500 font-semibold" suppressHighlighting onPress={() => openUrl(part)}>
               {part}
             </Text>
           );
