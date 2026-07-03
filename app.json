@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "OnyLink",
+    "slug": "onylink",
+    "scheme": "onylink",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0A1030"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.goxtechub.onylink"
+    },
+    "android": {
+      "package": "com.goxtechub.onylink",
+      "adaptiveIcon": {
+        "backgroundColor": "#0A1030"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-font",
+      "expo-asset",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O OnyLink usa suas fotos para você anexar imagens aos posts.",
+          "cameraPermission": "O OnyLink usa a câmera para você tirar foto ou gravar vídeo para os posts.",
+          "microphonePermission": "O OnyLink usa o microfone para gravar o áudio dos vídeos dos posts."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "O OnyLink usa a câmera para você tirar foto ou gravar vídeo para os posts.",
+          "microphonePermission": "O OnyLink usa o microfone para gravar o áudio dos vídeos dos posts."
+        }
+      ],
+      "expo-video"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "apiUrl": "http://localhost:4444",
+      "transportSecret": "change-me-transport"
+    }
+  }
+}

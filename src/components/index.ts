@@ -1,0 +1,33 @@
+// Biblioteca de componentes reutilizáveis OnyLink. Importe daqui — NÃO recrie
+// botão/input/link/chip em cada tela (ver CLAUDE.md §13). Falta algo? Crie aqui.
+export { Button } from './Button';
+export { Input } from './Input';
+export { Screen } from './Screen';
+export { TextLink } from './TextLink';
+export { Logo } from './Logo';
+export { Chip } from './Chip';
+export { SocialButton } from './SocialButton';
+export { Icon, type IconName } from './Icon';
+export { EmptyState } from './EmptyState';
+export { Avatar } from './Avatar';
+export { Card } from './Card';
+export { Badge } from './Badge';
+export { ListRow } from './ListRow';
+export { SectionHeader } from './SectionHeader';
+export { PostCard } from './PostCard';
+export { OpportunityCard } from './OpportunityCard';
+export { MediaCarousel } from './MediaCarousel';
+export { HashtagText } from './HashtagText';
+export { CommentThread, type CommentNode } from './CommentThread';
+export { CommentsSection } from './CommentsSection';
+export { CommentComposer } from './CommentComposer';
+export { AnimatedReaction } from './AnimatedReaction';
+export { ToastProvider, useToast } from './feedback/toast';
+export { DialogProvider, useDialog } from './feedback/dialog';
+export { ProfileHeader } from './profile/ProfileHeader';
+export { ContactSheet } from './profile/ContactSheet';
+export { SuggestionsRow } from './profile/SuggestionsRow';
+export { ProfileTabsBar, useProfileTabList, type ProfileTab } from './profile/ProfileTabs';
+export { CompactPostRow } from './profile/CompactPostRow';
+export { FollowsSheet, type FollowsKind } from './profile/FollowsSheet';
+export { SelectSheet } from './SelectSheet';
