@@ -15,6 +15,7 @@ import { HIT_SLOP, PRESSED_OPACITY } from '../../theme/tokens';
 import { handleOf } from '../../lib/format';
 import { useAuth } from '../../store/auth';
 import { syncFeedLiveCounts, useFeed, useToggleInsight, useToggleLike, useToggleRepost, useToggleShare, useToggleTopCommentReaction } from '../../features/feed/hooks';
+import { useUnreadCount } from '../../features/notifications/hooks';
 import { useFollowFlow } from '../../components/follow/FollowFlowProvider';
 import { useMediaUi } from '../../store/mediaUi';
 import type { FeedPost } from '../../features/feed/types';
@@ -27,6 +28,7 @@ export default function Feed() {
   const user = useAuth((s) => s.user);
   const qc = useQueryClient();
   const { data, isLoading, isError, refetch, isRefetching } = useFeed();
+  const { data: unread } = useUnreadCount();
   const toggleInsight = useToggleInsight();
   const toggleLike = useToggleLike();
   const toggleRepost = useToggleRepost();
@@ -105,8 +107,15 @@ export default function Feed() {
           <Pressable onPress={() => router.push('/search')} hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
             <Icon name="search" set="light" size={24} color={colors.ink[900]} />
           </Pressable>
-          <Pressable onPress={() => toast.info('Notificações em breve.')} hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
-            <Icon name="bell" set="light" size={24} color={colors.ink[900]} />
+          <Pressable onPress={() => router.push('/notifications')} hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
+            <View>
+              <Icon name="bell" set="light" size={24} color={colors.ink[900]} />
+              {unread ? (
+                <View className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] rounded-full bg-danger items-center justify-center px-1">
+                  <Text className="text-white text-[10px] font-bold">{unread > 99 ? '99+' : unread}</Text>
+                </View>
+              ) : null}
+            </View>
           </Pressable>
         </View>
       </Animated.View>

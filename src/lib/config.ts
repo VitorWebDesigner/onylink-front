@@ -52,6 +52,7 @@ export const config = {
     opportunities: all,
     comments: all,
     profile: all,
+    notifications: all,
     groups: true,
   },
 };
