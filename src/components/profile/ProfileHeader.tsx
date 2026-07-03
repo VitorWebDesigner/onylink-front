@@ -1,7 +1,9 @@
 import { useState, type ReactNode } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { Avatar } from '../Avatar';
+import { Badge } from '../Badge';
 import { BottomSheet } from '../BottomSheet';
 import { Chip } from '../Chip';
 import { Icon } from '../Icon';
@@ -19,20 +21,35 @@ function since(createdAt: string | null): string | null {
 
 const openUrl = (url: string) => { void Linking.openURL(/^https?:/i.test(url) ? url : `https://${url}`); };
 
-/** Bio com URLs CLICÁVEIS (o dono digita o link no texto da bio e ele vira link). */
+/** Bio com URLs e @MENÇÕES clicáveis (URL abre no navegador; @handle abre o perfil). */
 function BioText({ text }: { text: string }) {
-  const parts = text.split(/(https?:\/\/\S+|www\.\S+)/gi);
+  const router = useRouter();
+  const parts = text.split(/(https?:\/\/\S+|www\.\S+|@[a-z0-9_.]+)/gi);
   return (
     <Text className="text-ink-700 leading-5 pt-2">
-      {parts.map((part, i) =>
-        /^(https?:\/\/|www\.)/i.test(part) ? (
-          <Text key={i} className="text-brand-500 font-semibold" suppressHighlighting onPress={() => openUrl(part)}>
-            {part}
-          </Text>
-        ) : (
-          part
-        ),
-      )}
+      {parts.map((part, i) => {
+        if (/^(https?:\/\/|www\.)/i.test(part)) {
+          return (
+            <Text key={i} className="text-brand-500 font-semibold" suppressHighlighting onPress={() => openUrl(part)}>
+              {part}
+            </Text>
+          );
+        }
+        if (/^@[a-z0-9_.]+$/i.test(part)) {
+          // rota aceita handle: GET /web/users/:idOuHandle (a tela resolve o id real)
+          return (
+            <Text
+              key={i}
+              className="text-brand-500 font-semibold"
+              suppressHighlighting
+              onPress={() => router.push({ pathname: '/user/[id]', params: { id: part.slice(1).toLowerCase() } })}
+            >
+              {part}
+            </Text>
+          );
+        }
+        return part;
+      })}
     </Text>
   );
 }
@@ -89,6 +106,14 @@ export function ProfileHeader({ p, actions, onPressFollowers, onPressFollowing }
             <Text className="text-ink-700 text-sm pt-0.5">{[p.roleTitle, p.companyName].filter(Boolean).join(' · ')}</Text>
           ) : null}
         </View>
+
+        {/* selos automáticos por regra (Fase 4) */}
+        {p.badgeConnector || p.badgeAuthority ? (
+          <View className="flex-row flex-wrap gap-2 pt-2">
+            {p.badgeConnector ? <Badge label="Conector" icon="connector" tone="accent" /> : null}
+            {p.badgeAuthority ? <Badge label="Autoridade" icon="authority" tone="navy" /> : null}
+          </View>
+        ) : null}
 
         {p.bio ? <BioText text={p.bio} /> : null}
 

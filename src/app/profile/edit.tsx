@@ -14,9 +14,12 @@ import { HIT_SLOP, PRESSED_OPACITY } from '../../theme/tokens';
 import { pickImages, uploadImage } from '../../lib/media';
 import { UFS, SEGMENTS, fetchCities } from '../../lib/br';
 import { useAuth } from '../../store/auth';
-import { useMe, useUpdateProfile } from '../../features/users/hooks';
+import { useMe, useUpdateProfile, type ProfileLink } from '../../features/users/hooks';
 
 const BIO_MAX = 200;
+const MAX_LINKS = 5;
+const MAX_INTERESTS = 10;
+const normalizeUrl = (u: string) => (/^https?:\/\//i.test(u) ? u : `https://${u}`);
 
 /** Linha de SELEÇÃO (o usuário escolhe, não digita): valor + chevron → abre sheet. */
 function SelectRow({ label, value, placeholder, disabled, onPress }: {
@@ -61,6 +64,11 @@ export default function EditProfile() {
   const [contactEmail, setContactEmail] = useState('');
   const [contactWhatsapp, setContactWhatsapp] = useState('');
   const [contactUrl, setContactUrl] = useState('');
+  const [links, setLinks] = useState<ProfileLink[]>([]);
+  const [newLinkLabel, setNewLinkLabel] = useState('');
+  const [newLinkUrl, setNewLinkUrl] = useState('');
+  const [interests, setInterests] = useState<string[]>([]);
+  const [newInterest, setNewInterest] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -83,6 +91,8 @@ export default function EditProfile() {
     setContactEmail(profile.contactEmail ?? '');
     setContactWhatsapp(profile.contactWhatsapp ?? '');
     setContactUrl(profile.contactUrl ?? '');
+    setLinks(profile.links ?? []);
+    setInterests(profile.interests ?? []);
     setAvatarUrl(profile.avatarPath);
     setCoverUrl(profile.coverPath);
     setHydrated(true);
@@ -120,6 +130,25 @@ export default function EditProfile() {
     }
   }
 
+  function addLink() {
+    const label = newLinkLabel.trim();
+    const url = newLinkUrl.trim();
+    if (!label || !url) { toast.info('Preencha nome e URL do link.'); return; }
+    if (links.length >= MAX_LINKS) { toast.info(`Máximo de ${MAX_LINKS} links.`); return; }
+    setLinks((l) => [...l, { label, url: normalizeUrl(url) }]);
+    setNewLinkLabel('');
+    setNewLinkUrl('');
+  }
+
+  function addInterest() {
+    const v = newInterest.trim().replace(/^#/, '');
+    if (!v) return;
+    if (interests.length >= MAX_INTERESTS) { toast.info(`Máximo de ${MAX_INTERESTS} interesses.`); return; }
+    if (interests.some((i) => i.toLowerCase() === v.toLowerCase())) { setNewInterest(''); return; }
+    setInterests((arr) => [...arr, v.slice(0, 40)]);
+    setNewInterest('');
+  }
+
   const busy = save.isPending || uploadingAvatar || uploadingCover;
 
   async function onSave() {
@@ -137,6 +166,8 @@ export default function EditProfile() {
         contactEmail: contactEmail.trim() || undefined,
         contactWhatsapp: contactWhatsapp.trim() || undefined,
         contactUrl: contactUrl.trim() || undefined,
+        links,       // array completo substitui ([] limpa)
+        interests,   // idem
       });
       if (name.trim() !== me?.name) updateUser({ name: name.trim() });
       toast.success('Perfil atualizado!');
@@ -214,6 +245,59 @@ export default function EditProfile() {
               />
               <Text className="text-ink-400 text-xs text-right">{bio.length}/{BIO_MAX}</Text>
             </View>
+
+            {/* links estruturados — aparecem abaixo da bio no perfil (Fase 4) */}
+            <View className="gap-1 pt-1">
+              <Text className="text-ink-900 font-bold text-base">Links</Text>
+              <Text className="text-ink-500 text-xs">Até {MAX_LINKS} links exibidos no seu perfil.</Text>
+            </View>
+            {links.map((l, idx) => (
+              <View key={`${l.url}-${idx}`} className="flex-row items-center gap-3 py-2 border-b border-surface-border">
+                <Icon name="link" size={16} color={colors.brand[500]} />
+                <View className="flex-1">
+                  <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{l.label}</Text>
+                  <Text className="text-ink-500 text-xs" numberOfLines={1}>{l.url}</Text>
+                </View>
+                <Pressable onPress={() => setLinks((arr) => arr.filter((_, i) => i !== idx))} hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
+                  <Icon name="close" size={18} color={colors.ink[500]} />
+                </Pressable>
+              </View>
+            ))}
+            {links.length < MAX_LINKS ? (
+              <View className="gap-3">
+                <View className="flex-row gap-3">
+                  <View className="w-32"><Input value={newLinkLabel} onChangeText={setNewLinkLabel} placeholder="Nome" maxLength={40} /></View>
+                  <View className="flex-1"><Input value={newLinkUrl} onChangeText={setNewLinkUrl} placeholder="suaempresa.com.br" keyboardType="url" autoCapitalize="none" maxLength={300} /></View>
+                </View>
+                <Button title="Adicionar link" variant="secondary" size="sm" onPress={addLink} />
+              </View>
+            ) : null}
+
+            {/* interesses (chips estilo Threads) — matching de networking (Fase 4) */}
+            <View className="gap-1 pt-1">
+              <Text className="text-ink-900 font-bold text-base">Interesses</Text>
+              <Text className="text-ink-500 text-xs">Até {MAX_INTERESTS} — ajudam a te conectar com quem busca o mesmo. Toque num interesse para remover.</Text>
+            </View>
+            {interests.length ? (
+              <View className="flex-row flex-wrap gap-2">
+                {interests.map((i) => (
+                  <Pressable key={i} onPress={() => setInterests((arr) => arr.filter((x) => x !== i))} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
+                    <View className="flex-row items-center gap-1 px-3 h-8 rounded-pill bg-surface-muted border border-surface-border">
+                      <Text className="text-ink-700 text-sm">#{i}</Text>
+                      <Icon name="close" size={12} color={colors.ink[500]} />
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+            {interests.length < MAX_INTERESTS ? (
+              <View className="flex-row gap-3">
+                <View className="flex-1">
+                  <Input value={newInterest} onChangeText={setNewInterest} placeholder="Ex.: Vendas B2B" maxLength={40} onSubmitEditing={addInterest} returnKeyType="done" />
+                </View>
+                <View className="w-32 justify-end"><Button title="Adicionar" variant="secondary" size="sm" onPress={addInterest} /></View>
+              </View>
+            ) : null}
 
             {/* contato — alimenta o sheet do botão Contato no perfil público */}
             <View className="gap-1 pt-1">

@@ -26,7 +26,8 @@ export default function UserProfileScreen() {
   const [contactOpen, setContactOpen] = useState(false);
   const [follows, setFollows] = useState<FollowsKind | null>(null);
   const [tab, setTab] = useState<ProfileTab>('posts');
-  const tabList = useProfileTabList(id, tab);
+  // abas usam o id RESOLVIDO (a rota aceita @handle nas menções da bio — Fase 4)
+  const tabList = useProfileTabList(u?.id ?? '', tab);
 
   const isMe = !!u && u.id === me?.id;
   const hasContact = !!(u?.contactEmail || u?.contactWhatsapp || u?.contactUrl);

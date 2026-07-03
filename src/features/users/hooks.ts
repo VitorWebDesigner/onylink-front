@@ -29,6 +29,9 @@ export interface UserProfile {
   createdAt: string | null;
   verified: boolean;
   professional: boolean;
+  /** Selos automáticos por regra (Conector = 50+ seguidores; Autoridade = 100+ insights). */
+  badgeConnector: boolean;
+  badgeAuthority: boolean;
   followed: boolean;
   followersCount: number;
   followingCount: number;
@@ -56,6 +59,8 @@ interface RawUser {
   created_at: string | null;
   verified?: boolean;
   professional?: boolean;
+  badge_connector?: boolean;
+  badge_authority?: boolean;
   followed: boolean;
   followers_count: number | null;
   following_count: number | null;
@@ -83,6 +88,8 @@ const toUser = (r: RawUser): UserProfile => ({
   createdAt: r.created_at ?? null,
   verified: Boolean(r.verified),
   professional: Boolean(r.professional),
+  badgeConnector: Boolean(r.badge_connector),
+  badgeAuthority: Boolean(r.badge_authority),
   followed: Boolean(r.followed),
   followersCount: r.followers_count ?? 0,
   followingCount: r.following_count ?? 0,
@@ -123,6 +130,9 @@ export interface UpdateProfileInput {
   contactEmail?: string;
   contactWhatsapp?: string;
   contactUrl?: string;
+  /** Enviar o array COMPLETO (substitui; [] limpa). */
+  links?: ProfileLink[];
+  interests?: string[];
 }
 
 /** Publicações de um usuário (aba do perfil; fixado vem primeiro). */
