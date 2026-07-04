@@ -1,14 +1,19 @@
 import { useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '../../components/Avatar';
 import { EmptyState } from '../../components/EmptyState';
-import { PRESSED_OPACITY } from '../../theme/tokens';
+import { Icon } from '../../components/Icon';
+import { CommunitiesList } from '../../components/community/CommunitiesList';
+import { colors } from '../../theme/colors';
+import { HIT_SLOP, PRESSED_OPACITY } from '../../theme/tokens';
 import { timeAgo } from '../../lib/time';
+import { useMe } from '../../features/users/hooks';
 
-type Seg = 'chats' | 'groups';
+type Seg = 'chats' | 'groups' | 'communities';
 
-// Conversas mockadas (módulo de mensagens 1:1 ainda não tem backend).
+// Conversas mockadas (módulo de mensagens 1:1 = Fase B do plano-grupos-comunidades).
 const CONVERSATIONS = [
   { id: 'cv1', name: 'Ana Ribeiro', last: 'Perfeito, fechamos então!', at: '2026-06-29T10:00:00.000Z' },
   { id: 'cv2', name: 'Carlos Pena', last: 'Te mando a proposta hoje à tarde.', at: '2026-06-29T08:20:00.000Z' },
@@ -17,8 +22,9 @@ const CONVERSATIONS = [
 
 function Segment({ value, onChange }: { value: Seg; onChange: (s: Seg) => void }) {
   const items: { key: Seg; label: string }[] = [
-    { key: 'chats', label: 'Mensagens' },
+    { key: 'chats', label: 'Conversas' },
     { key: 'groups', label: 'Grupos' },
+    { key: 'communities', label: 'Comunidades' },
   ];
   return (
     <View className="flex-row border-b border-surface-border">
@@ -35,12 +41,20 @@ function Segment({ value, onChange }: { value: Seg; onChange: (s: Seg) => void }
 }
 
 export default function Messages() {
+  const router = useRouter();
   const [seg, setSeg] = useState<Seg>('chats');
+  const { data: me } = useMe();
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
-      <View className="px-4 py-3">
+      <View className="px-4 py-3 flex-row items-center justify-between">
         <Text className="text-2xl font-extrabold text-ink-900">Mensagens</Text>
+        {/* criar comunidade (conta profissional) */}
+        {seg === 'communities' && me?.professional ? (
+          <Pressable onPress={() => router.push('/group/new')} hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
+            <Icon name="plus" set="light" size={26} color={colors.brand[500]} />
+          </Pressable>
+        ) : null}
       </View>
       <Segment value={seg} onChange={setSeg} />
 
@@ -63,15 +77,17 @@ export default function Messages() {
             </Pressable>
           )}
         />
-      ) : (
+      ) : seg === 'groups' ? (
         <View className="pt-24">
           {/* grupos de CHAT (estilo WhatsApp) — Fase B do plano-grupos-comunidades.md */}
           <EmptyState
             icon="groups"
             title="Grupos de conversa em breve"
-            subtitle="Converse em grupo com outros empresários — estamos construindo. Comunidades por tema já estão na aba Comunidades."
+            subtitle="Converse em grupo com outros empresários — estamos construindo."
           />
         </View>
+      ) : (
+        <CommunitiesList />
       )}
     </SafeAreaView>
   );

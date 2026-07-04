@@ -20,7 +20,6 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="feed" options={{ tabBarIcon: ({ color, focused }) => <Icon name="home" size={26} color={color} set={focused ? 'bold' : 'light'} /> }} />
-      <Tabs.Screen name="groups" options={{ tabBarIcon: ({ color, focused }) => <Icon name="groups" size={26} color={color} set={focused ? 'bold' : 'light'} /> }} />
       <Tabs.Screen name="opportunities" options={{ tabBarIcon: ({ color, focused }) => <Icon name="work" size={26} color={color} set={focused ? 'bold' : 'light'} /> }} />
 
       {/* + central: não navega, abre o modal de compose */}
@@ -32,6 +31,9 @@ export default function TabsLayout() {
 
       <Tabs.Screen name="messages" options={{ tabBarIcon: ({ color, focused }) => <Icon name="chat" size={26} color={color} set={focused ? 'bold' : 'light'} /> }} />
       <Tabs.Screen name="profile" options={{ tabBarIcon: ({ color, focused }) => <Icon name="user" size={26} color={color} set={focused ? 'bold' : 'light'} /> }} />
+
+      {/* comunidades moram DENTRO de Mensagens — rota escondida do tab bar */}
+      <Tabs.Screen name="groups" options={{ href: null }} />
     </Tabs>
   );
 }

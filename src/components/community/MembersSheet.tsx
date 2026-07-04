@@ -16,16 +16,25 @@ type Tab = 'members' | 'requests';
  * perfil. ADMIN vê a aba Pedidos (privada) com aprovar/recusar e pode remover
  * membro.
  */
-export function MembersSheet({ groupId, isAdmin, isPrivate, visible, onClose }: {
+export function MembersSheet({ groupId, isAdmin, isPrivate, visible, onClose, initialTab = 'members' }: {
   groupId: string;
   isAdmin: boolean;
   isPrivate: boolean;
   visible: boolean;
   onClose: () => void;
+  /** Abrir direto na aba Pedidos (linha de solicitações da tela de dados). */
+  initialTab?: Tab;
 }) {
   const router = useRouter();
   const me = useAuth((s) => s.user);
-  const [tab, setTab] = useState<Tab>('members');
+  const [tab, setTab] = useState<Tab>(initialTab);
+
+  // re-sincroniza a aba a cada abertura
+  const [lastVisible, setLastVisible] = useState(false);
+  if (visible !== lastVisible) {
+    setLastVisible(visible);
+    if (visible) setTab(initialTab);
+  }
   const { data: members, isLoading } = useGroupMembers(groupId, visible);
   const { data: requests } = useJoinRequests(groupId, visible && isAdmin && isPrivate);
   const { approve, reject, remove } = useModerateMembers(groupId);

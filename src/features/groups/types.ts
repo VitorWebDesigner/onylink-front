@@ -18,6 +18,7 @@ export interface Group {
   /** Papel do usuário na comunidade ('ADMIN' | 'MEMBER' | null). */
   myRole?: string | null;
   creatorName?: string | null;
+  createdAt?: string | null;
   /** Só no mock offline (ícone ilustrativo — Ionicon). */
   icon?: string;
 }
@@ -56,6 +57,7 @@ export interface RawGroupRow {
   pinned?: boolean;
   my_role?: string | null;
   creator_name?: string | null;
+  created_at?: string;
 }
 
 export const toGroup = (r: RawGroupRow): Group => ({
@@ -74,4 +76,5 @@ export const toGroup = (r: RawGroupRow): Group => ({
   pinned: Boolean(r.pinned),
   myRole: r.my_role ?? null,
   creatorName: r.creator_name ?? null,
+  createdAt: r.created_at ?? null,
 });
