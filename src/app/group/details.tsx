@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Share, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Share, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,15 +7,28 @@ import { Avatar } from '../../components/Avatar';
 import { BottomSheet, SheetScrollView } from '../../components/BottomSheet';
 import { EmptyState } from '../../components/EmptyState';
 import { Icon, type IconName } from '../../components/Icon';
+import { MemberActionsSheet } from '../../components/community/MemberActionsSheet';
 import { MembersSheet } from '../../components/community/MembersSheet';
 import { useDialog } from '../../components/feedback/dialog';
 import { useToast } from '../../components/feedback/toast';
 import { colors } from '../../theme/colors';
 import { HIT_SLOP, PRESSED_OPACITY } from '../../theme/tokens';
+import { timeAgo } from '../../lib/time';
 import { useAuth } from '../../store/auth';
 import { useGroup, useGroupMembers, useGroupPosts, useJoinRequests, useModerateMembers, useTogglePinGroup, useToggleJoin } from '../../features/groups/hooks';
+import type { GroupMember } from '../../features/groups/types';
 
 const MONTHS = ['jan.', 'fev.', 'mar.', 'abr.', 'mai.', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.'];
+
+/** Botão quadrado da fileira de ações (estilo WhatsApp — pedido do dono). */
+function ActionSquare({ icon, label, active, onPress }: { icon: IconName; label: string; active?: boolean; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })} className="flex-1 items-center gap-1.5 py-3 rounded-2xl bg-surface-muted border border-surface-border">
+      <Icon name={icon} set={active ? 'bold' : 'light'} size={22} color={colors.brand[500]} />
+      <Text className="text-ink-700 text-xs font-semibold" numberOfLines={1}>{label}</Text>
+    </Pressable>
+  );
+}
 
 function Row({ icon, label, sub, badge, danger, onPress }: {
   icon: IconName; label: string; sub?: string; badge?: number; danger?: boolean; onPress: () => void;
@@ -38,10 +51,10 @@ function Row({ icon, label, sub, badge, danger, onPress }: {
 }
 
 /**
- * DADOS DA COMUNIDADE (estilo WhatsApp). Ações rápidas = ÍCONES no header
- * (publicar/fixar/editar). Corpo: solicitações c/ badge, mídia da comunidade,
- * compartilhar, membros inline (promover/transferir/remover), sair com
- * CONFIRMAÇÃO (dono não sai sem transferir a propriedade — o back barra).
+ * DADOS DA COMUNIDADE (estilo WhatsApp): fileira de SQUARES (Publicar/Membros/
+ * Buscar/Fixar/Editar), rows (solicitações c/ badge, mídia, convidar), membros
+ * com SETA → sheet flutuante de ações (perfil/seguir/promover/transferir/remover),
+ * sair com confirmação (dono não sai sem transferir).
  */
 export default function CommunityDetails() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -62,15 +75,23 @@ export default function CommunityDetails() {
   const [membersOpen, setMembersOpen] = useState(false);
   const [membersTab, setMembersTab] = useState<'members' | 'requests'>('members');
   const [mediaOpen, setMediaOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQ, setSearchQ] = useState('');
+  const [memberTarget, setMemberTarget] = useState<GroupMember | null>(null);
 
   const openMembers = (tab: 'members' | 'requests') => { setMembersTab(tab); setMembersOpen(true); };
 
-  // mídias dos posts da comunidade (client-side — mesma fonte do feed dela)
   const mediaItems = useMemo(
     () => (posts ?? []).flatMap((p) => p.media.map((m, i) => ({ key: `${p.id}-${i}`, postId: p.id, type: m.type, uri: m.type === 'VIDEO' ? m.thumbnail : m.url }))),
     [posts],
   );
   const cell = Math.floor((screenW - 4) / 3);
+
+  const searchResults = useMemo(() => {
+    const q = searchQ.trim().toLowerCase();
+    if (!q) return [];
+    return (posts ?? []).filter((p) => p.content?.toLowerCase().includes(q) || p.authorName.toLowerCase().includes(q));
+  }, [posts, searchQ]);
 
   async function onLeave() {
     if (!g) return;
@@ -105,35 +126,26 @@ export default function CommunityDetails() {
     });
   }
 
+  async function onRemove(targetId: string) {
+    const ok = await dialog.confirm({
+      title: 'Remover da comunidade?',
+      message: 'A pessoa perde o acesso às publicações e pode pedir para entrar de novo.',
+      confirmText: 'Remover',
+      cancelText: 'Cancelar',
+      destructive: true,
+    });
+    if (ok) remove.mutate(targetId, { onSuccess: () => toast.success('Membro removido.') });
+  }
+
   const createdAt = g?.createdAt ? new Date(g.createdAt) : null;
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
-      {/* header: voltar · título · AÇÕES RÁPIDAS (publicar/fixar/editar) */}
       <View className="flex-row items-center gap-3 px-4 py-3 border-b border-surface-border">
         <Pressable onPress={() => router.back()} hitSlop={HIT_SLOP}>
           <Icon name="back" size={24} color={colors.ink[900]} />
         </Pressable>
         <Text className="text-ink-900 font-semibold text-base flex-1" numberOfLines={1}>Dados da comunidade</Text>
-        {g?.joined ? (
-          <Pressable onPress={() => router.push({ pathname: '/compose', params: { groupId: g.id, groupName: g.name } })} hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
-            <Icon name="paper" set="light" size={22} color={colors.ink[900]} />
-          </Pressable>
-        ) : null}
-        {g?.joined ? (
-          <Pressable
-            onPress={() => togglePin.mutate({ id: g.id, pinned: g.pinned }, { onError: (e) => toast.error(e instanceof Error ? e.message : 'Não foi possível fixar.') })}
-            hitSlop={HIT_SLOP}
-            style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
-          >
-            <Icon name="bookmark" set={g.pinned ? 'bold' : 'light'} size={22} color={g.pinned ? colors.brand[500] : colors.ink[900]} />
-          </Pressable>
-        ) : null}
-        {isAdmin ? (
-          <Pressable onPress={() => router.push({ pathname: '/group/edit', params: { id: g!.id } })} hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
-            <Icon name="edit" set="light" size={22} color={colors.ink[900]} />
-          </Pressable>
-        ) : null}
       </View>
 
       {isLoading || !g ? (
@@ -143,7 +155,7 @@ export default function CommunityDetails() {
       ) : (
         <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
           {/* identidade */}
-          <View className="items-center gap-2 px-4 pt-6 pb-5">
+          <View className="items-center gap-2 px-4 pt-6 pb-4">
             {g.coverPath ? (
               <Image source={{ uri: g.coverPath }} style={{ width: 96, height: 96, borderRadius: 48 }} contentFit="cover" />
             ) : (
@@ -166,12 +178,27 @@ export default function CommunityDetails() {
             ) : null}
           </View>
 
+          {/* fileira de SQUARES (estilo WhatsApp) */}
+          {g.joined ? (
+            <View className="flex-row gap-2.5 px-4 pb-5">
+              <ActionSquare icon="paper" label="Publicar" onPress={() => router.push({ pathname: '/compose', params: { groupId: g.id, groupName: g.name } })} />
+              <ActionSquare icon="groups" label="Membros" onPress={() => openMembers('members')} />
+              <ActionSquare icon="search" label="Buscar" onPress={() => setSearchOpen(true)} />
+              <ActionSquare
+                icon="bookmark"
+                label={g.pinned ? 'Fixada' : 'Fixar'}
+                active={g.pinned}
+                onPress={() => togglePin.mutate({ id: g.id, pinned: g.pinned }, { onError: (e) => toast.error(e instanceof Error ? e.message : 'Não foi possível fixar.') })}
+              />
+              {isAdmin ? <ActionSquare icon="edit" label="Editar" onPress={() => router.push({ pathname: '/group/edit', params: { id: g.id } })} /> : null}
+            </View>
+          ) : null}
+
           {/* solicitações (ADMIN, privada) — badge bem visível */}
           {isAdmin && g.isPrivate ? (
             <Row icon="bell" label="Solicitações de entrada" sub="Aprove ou recuse quem pediu para entrar" badge={requests?.length ?? g.pendingRequests} onPress={() => openMembers('requests')} />
           ) : null}
 
-          {/* conteúdo e alcance */}
           {g.joined ? (
             <Row icon="image" label="Mídia da comunidade" sub={`${mediaItems.length} arquivo${mediaItems.length === 1 ? '' : 's'} nas publicações`} onPress={() => setMediaOpen(true)} />
           ) : null}
@@ -182,7 +209,7 @@ export default function CommunityDetails() {
             onPress={() => void Share.share({ message: `Participe da comunidade "${g.name}" no OnyLink — ${g.description ?? 'networking de negócios de verdade.'}` })}
           />
 
-          {/* membros inline (primeiros 8) — dono promove/transfere; admin remove */}
+          {/* membros inline — SETA indica ações; toque abre o sheet flutuante */}
           {g.joined ? (
             <View className="pt-2">
               <Text className="text-ink-500 text-sm font-semibold px-4 pt-3 pb-1">{g.memberCount.toLocaleString('pt-BR')} membros</Text>
@@ -191,7 +218,7 @@ export default function CommunityDetails() {
                 return (
                   <Pressable
                     key={m.id}
-                    onPress={() => router.push({ pathname: '/user/[id]', params: { id: m.id } })}
+                    onPress={() => (self ? router.push('/(tabs)/profile') : setMemberTarget(m))}
                     style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
                     className="flex-row items-center gap-3 px-4 py-3 border-b border-surface-border"
                   >
@@ -207,14 +234,7 @@ export default function CommunityDetails() {
                       </View>
                       <Text className="text-ink-400 text-[13px]" numberOfLines={1}>@{m.handle}{m.roleTitle ? ` · ${m.roleTitle}` : ''}</Text>
                     </View>
-                    {!self && isAdmin && m.role !== 'ADMIN' ? (
-                      <View className="flex-row gap-3">
-                        <Text className="text-brand-500 text-xs font-bold" suppressHighlighting onPress={() => promote.mutate(m.id, { onSuccess: () => toast.success(`${m.name} agora é admin.`) })}>Promover</Text>
-                        <Text className="text-danger text-xs font-bold" suppressHighlighting onPress={() => remove.mutate(m.id)}>Remover</Text>
-                      </View>
-                    ) : !self && isOwner && m.role === 'ADMIN' ? (
-                      <Text className="text-brand-500 text-xs font-bold" suppressHighlighting onPress={() => void onTransfer(m.id, m.name)}>Transferir</Text>
-                    ) : null}
+                    <Icon name="forward" set="light" size={16} color={colors.ink[400]} />
                   </Pressable>
                 );
               })}
@@ -254,11 +274,32 @@ export default function CommunityDetails() {
         </ScrollView>
       )}
 
+      {/* membros/pedidos (selecionar membro fecha e abre o sheet de ações) */}
       {g ? (
-        <MembersSheet groupId={g.id} isAdmin={!!isAdmin} isPrivate={g.isPrivate} visible={membersOpen} onClose={() => setMembersOpen(false)} initialTab={membersTab} />
+        <MembersSheet
+          groupId={g.id}
+          isAdmin={!!isAdmin}
+          isPrivate={g.isPrivate}
+          visible={membersOpen}
+          onClose={() => setMembersOpen(false)}
+          initialTab={membersTab}
+          onSelectMember={(m) => { setMembersOpen(false); setTimeout(() => setMemberTarget(m), 250); }}
+        />
       ) : null}
 
-      {/* mídia da comunidade — grade das mídias dos posts */}
+      {/* ações do membro (flutuante) */}
+      {g ? (
+        <MemberActionsSheet
+          member={memberTarget}
+          group={g}
+          onClose={() => setMemberTarget(null)}
+          onPromote={(uid) => promote.mutate(uid, { onSuccess: () => toast.success('Agora é admin da comunidade.') })}
+          onTransfer={(uid, name) => void onTransfer(uid, name)}
+          onRemove={(uid) => void onRemove(uid)}
+        />
+      ) : null}
+
+      {/* mídia da comunidade */}
       <BottomSheet visible={mediaOpen} onClose={() => setMediaOpen(false)} fullHeight>
         <View className="flex-1">
           <Text className="text-ink-900 text-lg font-extrabold text-center pb-3">Mídia da comunidade</Text>
@@ -286,6 +327,42 @@ export default function CommunityDetails() {
               <Text className="text-ink-500 text-center">Nenhuma mídia nas publicações ainda.</Text>
             </View>
           )}
+        </View>
+      </BottomSheet>
+
+      {/* buscar nas publicações da comunidade */}
+      <BottomSheet visible={searchOpen} onClose={() => { setSearchOpen(false); setSearchQ(''); }} fullHeight>
+        <View className="flex-1">
+          <Text className="text-ink-900 text-lg font-extrabold text-center pb-3">Buscar na comunidade</Text>
+          <View className="px-4 pb-3">
+            <TextInput
+              value={searchQ}
+              onChangeText={setSearchQ}
+              placeholder="Buscar por texto ou autor…"
+              placeholderTextColor={colors.ink[400]}
+              autoFocus
+              className="h-11 rounded-input px-4 bg-surface-muted text-ink-900 border border-surface-border"
+            />
+          </View>
+          <SheetScrollView className="flex-1" keyboardShouldPersistTaps="handled">
+            {searchResults.map((p) => (
+              <Pressable
+                key={p.id}
+                onPress={() => { setSearchOpen(false); setSearchQ(''); router.push({ pathname: '/post/[id]', params: { id: p.id } }); }}
+                style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
+                className="px-4 py-3 border-b border-surface-border gap-0.5"
+              >
+                <View className="flex-row items-center gap-2">
+                  <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{p.authorName}</Text>
+                  <Text className="text-ink-400 text-xs">· {timeAgo(p.createdAt)}</Text>
+                </View>
+                <Text className="text-ink-700 leading-5" numberOfLines={2}>{p.content?.trim() || `#${p.category}`}</Text>
+              </Pressable>
+            ))}
+            {searchQ.trim() && !searchResults.length ? (
+              <Text className="text-ink-500 text-center py-10">Nada encontrado nas publicações.</Text>
+            ) : null}
+          </SheetScrollView>
         </View>
       </BottomSheet>
     </SafeAreaView>

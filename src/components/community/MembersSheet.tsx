@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Avatar } from '../Avatar';
 import { BottomSheet, SheetScrollView } from '../BottomSheet';
 import { Button } from '../Button';
+import { Icon } from '../Icon';
 import { colors } from '../../theme/colors';
 import { PRESSED_OPACITY } from '../../theme/tokens';
 import { useAuth } from '../../store/auth';
@@ -16,7 +17,7 @@ type Tab = 'members' | 'requests';
  * perfil. ADMIN vê a aba Pedidos (privada) com aprovar/recusar e pode remover
  * membro.
  */
-export function MembersSheet({ groupId, isAdmin, isPrivate, visible, onClose, initialTab = 'members' }: {
+export function MembersSheet({ groupId, isAdmin, isPrivate, visible, onClose, initialTab = 'members', onSelectMember }: {
   groupId: string;
   isAdmin: boolean;
   isPrivate: boolean;
@@ -24,6 +25,8 @@ export function MembersSheet({ groupId, isAdmin, isPrivate, visible, onClose, in
   onClose: () => void;
   /** Abrir direto na aba Pedidos (linha de solicitações da tela de dados). */
   initialTab?: Tab;
+  /** Tocar num membro → a tela hospedeira fecha este sheet e abre o de AÇÕES. */
+  onSelectMember?: (m: import('../../features/groups/types').GroupMember) => void;
 }) {
   const router = useRouter();
   const me = useAuth((s) => s.user);
@@ -70,14 +73,14 @@ export function MembersSheet({ groupId, isAdmin, isPrivate, visible, onClose, in
                 {(members ?? []).map((m) => (
                   <Pressable
                     key={m.id}
-                    onPress={() => open(m.id)}
+                    onPress={() => (m.id === me?.id || !onSelectMember ? open(m.id) : onSelectMember(m))}
                     style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
                     className="flex-row items-center gap-3 px-4 py-3 border-b border-surface-border"
                   >
                     <Avatar name={m.name} uri={m.avatarPath} size="md" />
                     <View className="flex-1">
                       <View className="flex-row items-center gap-2">
-                        <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{m.name}</Text>
+                        <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{m.id === me?.id ? 'Você' : m.name}</Text>
                         {m.role === 'ADMIN' ? (
                           <View className="rounded-pill px-2 py-0.5 bg-accent-50">
                             <Text className="text-brand-500 text-[10px] font-bold">ADMIN</Text>
@@ -86,9 +89,8 @@ export function MembersSheet({ groupId, isAdmin, isPrivate, visible, onClose, in
                       </View>
                       <Text className="text-ink-400 text-[13px]" numberOfLines={1}>@{m.handle}{m.roleTitle ? ` · ${m.roleTitle}` : ''}</Text>
                     </View>
-                    {isAdmin && m.role !== 'ADMIN' && m.id !== me?.id ? (
-                      <Text className="text-danger text-xs font-bold" suppressHighlighting onPress={() => remove.mutate(m.id)}>Remover</Text>
-                    ) : null}
+                    {/* seta = há mais ações (sheet flutuante) */}
+                    <Icon name="forward" set="light" size={16} color={colors.ink[400]} />
                   </Pressable>
                 ))}
                 {!members?.length ? <Text className="text-ink-500 text-center py-10">Nenhum membro ainda.</Text> : null}

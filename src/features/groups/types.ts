@@ -34,6 +34,7 @@ export interface GroupMember {
   avatarPath: string | null;
   roleTitle: string | null;
   role: string; // ADMIN | MEMBER
+  followed: boolean;
 }
 
 export interface JoinRequest {
