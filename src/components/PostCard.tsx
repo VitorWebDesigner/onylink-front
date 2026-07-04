@@ -29,6 +29,8 @@ interface Props {
   onComment?: (post: FeedPost) => void;
   /** Perfil de um usuário QUALQUER do card (ex.: autor do comentário-destaque). */
   onOpenUser?: (userId: string) => void;
+  /** Tocar no banner "Repostado da comunidade X" → abre a comunidade. */
+  onOpenCommunity?: (communityId: string) => void;
   /** Reação no comentário-destaque inline (curtir/insight/repost/enviar). */
   onCommentReact?: (postId: string, commentId: string, kind: CommentReactionKind, active: boolean) => void;
   /** Esconde o comentário-destaque inline (ex.: na tela de detalhe, onde ele já é listado). */
@@ -79,7 +81,7 @@ function FollowPill({ followed, onPress }: { followed: boolean; onPress: () => v
  * ao post por uma linha de thread que vai do **avatar do postador ao avatar de
  * quem comentou** — cada um com sua própria barra de reações embaixo.
  */
-export function PostCard({ post, onToggleInsight, onToggleLike, onToggleRepost, onToggleShare, onOpen, onOpenAuthor, onComment, onOpenUser, onCommentReact, hideTopComment, onToggleFollow, isAuthor, hideMenu, onMenu, detail }: Props) {
+export function PostCard({ post, onToggleInsight, onToggleLike, onToggleRepost, onToggleShare, onOpen, onOpenAuthor, onComment, onOpenUser, onOpenCommunity, onCommentReact, hideTopComment, onToggleFollow, isAuthor, hideMenu, onMenu, detail }: Props) {
   const tc = hideTopComment ? null : post.topComment;
   const openAuthor = onOpenAuthor ?? onOpen; // avatar/nome → perfil (fallback: abre o post)
   const comment = onComment ?? onOpen; // comentar → abre focado (fallback: abre o post)
@@ -149,6 +151,21 @@ export function PostCard({ post, onToggleInsight, onToggleLike, onToggleRepost, 
 
   return (
     <View className="px-4 py-3 border-b border-surface-border bg-surface">
+      {/* post de COMUNIDADE repostado no feed pelo admin — créditos (decisão §5.1) */}
+      {post.featuredByName && post.communityName ? (
+        <Pressable
+          onPress={onOpenCommunity && post.communityId ? () => onOpenCommunity(post.communityId!) : undefined}
+          hitSlop={6}
+          style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
+          className="flex-row items-center gap-1.5 pb-2 pl-[52px]"
+        >
+          <Icon name="repost" set="light" size={13} color={colors.ink[400]} />
+          <Text className="text-ink-400 text-xs" numberOfLines={1}>
+            <Text className="font-semibold text-ink-500">{post.featuredByName}</Text> repostou da comunidade{' '}
+            <Text className="font-semibold text-brand-500">{post.communityName}</Text>
+          </Text>
+        </Pressable>
+      ) : null}
       {/* indicador de post fixado (perfil) */}
       {post.pinned ? (
         <View className="flex-row items-center gap-1.5 pb-1.5 pl-[52px]">

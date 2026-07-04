@@ -31,3 +31,4 @@ export { ProfileTabsBar, useProfileTabList, type ProfileTab } from './profile/Pr
 export { CompactPostRow } from './profile/CompactPostRow';
 export { FollowsSheet, type FollowsKind } from './profile/FollowsSheet';
 export { SelectSheet } from './SelectSheet';
+export { MembersSheet } from './community/MembersSheet';

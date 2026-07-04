@@ -54,6 +54,10 @@ export interface FeedPost {
   subscribed: boolean;
   /** Fixado no perfil do autor (só vem no listamento por autor). */
   pinned?: boolean;
+  /** Post de COMUNIDADE repostado no feed geral pelo admin (créditos no card). */
+  communityId?: string | null;
+  communityName?: string | null;
+  featuredByName?: string | null;
   createdAt: string;
   topComment?: TopComment | null;
 }
@@ -81,6 +85,10 @@ export interface RawFeedRow {
   author_followed?: boolean;
   subscribed?: boolean;
   pinned?: boolean;
+  group_id?: string | null;
+  featured_at?: string | null;
+  community_name?: string | null;
+  featured_by_name?: string | null;
   media?: MediaItem[];
   top_comment_id?: string | null;
   top_comment_content?: string | null;
@@ -117,6 +125,9 @@ export function toFeedPost(r: RawFeedRow): FeedPost {
     shared: Boolean(r.shared),
     insighted: Boolean(r.insighted),
     pinned: Boolean(r.pinned),
+    communityId: r.group_id ?? null,
+    communityName: r.community_name ?? null,
+    featuredByName: r.featured_at ? (r.featured_by_name ?? null) : null,
     authorFollowed: Boolean(r.author_followed),
     subscribed: Boolean(r.subscribed),
     createdAt: r.created_at,

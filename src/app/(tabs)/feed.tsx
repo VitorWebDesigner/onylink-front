@@ -154,6 +154,7 @@ export default function Feed() {
               onOpenAuthor={(p) => { if (p.authorId) router.push({ pathname: '/user/[id]', params: { id: p.authorId } }); }}
               onComment={(p) => router.push({ pathname: '/post/[id]', params: { id: p.id, focus: '1' } })}
               onOpenUser={(userId) => router.push({ pathname: '/user/[id]', params: { id: userId } })}
+              onOpenCommunity={(communityId) => router.push({ pathname: '/group/[id]', params: { id: communityId } })}
             />
           )}
           ListEmptyComponent={

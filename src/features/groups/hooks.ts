@@ -3,13 +3,14 @@ import { api } from '../../lib/api';
 import { config } from '../../lib/config';
 import { mockGroups, mockGroupPosts } from '../../lib/mock';
 import { toFeedPost, type FeedPost, type RawFeedRow } from '../feed/types';
-import { toGroup, type Group, type RawGroupRow } from './types';
+import { toGroup, type Group, type GroupMember, type JoinRequest, type RawGroupRow } from './types';
 
-/** Lista de grupos. `mine` → só os que sou membro. Backend: GET /web/groups. */
+/** Lista de comunidades. `mine` → só as que sou membro. Fixadas vêm primeiro. */
 export function useGroups(opts?: { mine?: boolean }) {
   const mine = !!opts?.mine;
   return useQuery({
     queryKey: ['groups', mine ? 'mine' : 'all'],
+    staleTime: 0,
     queryFn: async (): Promise<Group[]> => {
       if (config.mock.groups) return mine ? mockGroups.filter((g) => g.joined) : mockGroups;
       const rows = await api.get<RawGroupRow[]>(`/web/groups${mine ? '?mine=1' : ''}`);
@@ -18,7 +19,7 @@ export function useGroups(opts?: { mine?: boolean }) {
   });
 }
 
-/** Um grupo por id (ou slug). Backend: GET /web/groups/:idOuSlug. */
+/** Uma comunidade por id (ou slug). */
 export function useGroup(idOrSlug: string) {
   return useQuery({
     queryKey: ['group', idOrSlug],
@@ -32,12 +33,12 @@ export function useGroup(idOrSlug: string) {
   });
 }
 
-/** Publicações do grupo — mesmo formato do feed (PostCard direto).
- *  Backend: GET /web/posts?groupId=... */
-export function useGroupPosts(groupId: string) {
+/** Publicações da comunidade (SÓ membros — o back devolve 403 p/ não-membro). */
+export function useGroupPosts(groupId: string, enabled = true) {
   return useQuery({
     queryKey: ['group-posts', groupId],
-    enabled: !!groupId,
+    enabled: !!groupId && enabled,
+    retry: false, // 403 de não-membro não deve re-tentar
     queryFn: async (): Promise<FeedPost[]> => {
       if (config.mock.groups) return mockGroupPosts[groupId] ?? [];
       const { items } = await api.get<{ items: RawFeedRow[] }>(`/web/posts?groupId=${groupId}&cursor=0&limit=30`);
@@ -46,17 +47,27 @@ export function useGroupPosts(groupId: string) {
   });
 }
 
-/** Entra/sai do grupo (otimista). Backend: POST /web/groups/:id/join | /:id/leave. */
+/**
+ * Entrar/sair. Pública entra direto; PRIVADA vira pedido (requested=true) até o
+ * admin aprovar. Otimista nos dois casos.
+ */
 export function useToggleJoin() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, joined }: { id: string; joined: boolean }) => {
+    mutationFn: async ({ id, joined, isPrivate, requested }: { id: string; joined: boolean; isPrivate: boolean; requested: boolean }) => {
       if (config.mock.groups) return;
-      return joined ? api.post(`/web/groups/${id}/leave`) : api.post(`/web/groups/${id}/join`);
+      if (joined || requested) return api.post(`/web/groups/${id}/leave`); // sair OU cancelar pedido
+      return api.post(`/web/groups/${id}/join`);
     },
-    onMutate: async ({ id, joined }) => {
+    onMutate: async ({ id, joined, isPrivate, requested }) => {
       await qc.cancelQueries({ queryKey: ['groups'] });
-      const patch = (g: Group) => (g.id === id ? { ...g, joined: !joined, memberCount: Math.max(0, g.memberCount + (joined ? -1 : 1)) } : g);
+      const patch = (g: Group): Group => {
+        if (g.id !== id) return g;
+        if (joined) return { ...g, joined: false, myRole: null, memberCount: Math.max(0, g.memberCount - 1) };
+        if (requested) return { ...g, requested: false };
+        if (isPrivate) return { ...g, requested: true };
+        return { ...g, joined: true, myRole: 'MEMBER', memberCount: g.memberCount + 1 };
+      };
       const prevLists = qc.getQueriesData<Group[]>({ queryKey: ['groups'] });
       qc.setQueriesData<Group[]>({ queryKey: ['groups'] }, (old) => old?.map(patch));
       const prevOne = qc.getQueryData<Group>(['group', id]);
@@ -67,8 +78,10 @@ export function useToggleJoin() {
       ctx?.prevLists?.forEach(([k, d]) => qc.setQueryData(k, d));
       if (ctx?.prevOne) qc.setQueryData(['group', v.id], ctx.prevOne);
     },
-    onSettled: () => {
-      if (!config.mock.groups) void qc.invalidateQueries({ queryKey: ['groups'] });
+    onSettled: (_d, _e, v) => {
+      if (config.mock.groups) return;
+      void qc.invalidateQueries({ queryKey: ['groups'] });
+      void qc.invalidateQueries({ queryKey: ['group', v.id] });
     },
   });
 }
@@ -78,9 +91,11 @@ export interface CreateGroupInput {
   description?: string;
   segment?: string;
   city?: string;
+  coverPath?: string;
+  isPrivate?: boolean;
 }
 
-/** Cria grupo (ADMIN ou conta profissional). Backend: POST /web/groups. */
+/** Cria comunidade (ADMIN ou conta profissional). Criador entra como admin. */
 export function useCreateGroup() {
   const qc = useQueryClient();
   return useMutation({
@@ -88,8 +103,102 @@ export function useCreateGroup() {
       const row = await api.post<RawGroupRow>('/web/groups', input);
       return toGroup(row);
     },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['groups'] }),
+  });
+}
+
+export interface UpdateGroupInput {
+  name?: string;
+  description?: string;
+  segment?: string;
+  city?: string;
+  coverPath?: string;
+  isPrivate?: boolean;
+}
+
+/** Edita a comunidade (só admin). */
+export function useUpdateGroup(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateGroupInput) => api.patch(`/web/groups/${id}`, input),
     onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['group', id] });
       void qc.invalidateQueries({ queryKey: ['groups'] });
+    },
+  });
+}
+
+/** Membros da comunidade. */
+export function useGroupMembers(id: string, enabled = true) {
+  return useQuery({
+    queryKey: ['group-members', id],
+    enabled: !!id && enabled && !config.mock.groups,
+    staleTime: 0,
+    queryFn: async (): Promise<GroupMember[]> => {
+      const rows = await api.get<{ id: string; name: string; handle: string; avatar_path: string | null; role_title: string | null; role: string }[]>(`/web/groups/${id}/members?limit=200`);
+      return (rows ?? []).map((r) => ({ id: r.id, name: r.name, handle: r.handle, avatarPath: r.avatar_path, roleTitle: r.role_title, role: r.role }));
+    },
+  });
+}
+
+/** Pedidos pendentes (privada — só admin). */
+export function useJoinRequests(id: string, enabled = true) {
+  return useQuery({
+    queryKey: ['group-requests', id],
+    enabled: !!id && enabled && !config.mock.groups,
+    staleTime: 0,
+    queryFn: async (): Promise<JoinRequest[]> => {
+      const rows = await api.get<{ id: string; name: string; handle: string; avatar_path: string | null; role_title: string | null }[]>(`/web/groups/${id}/requests`);
+      return (rows ?? []).map((r) => ({ id: r.id, name: r.name, handle: r.handle, avatarPath: r.avatar_path, roleTitle: r.role_title }));
+    },
+  });
+}
+
+/** Aprova/recusa pedido; remove membro (admin). */
+export function useModerateMembers(id: string) {
+  const qc = useQueryClient();
+  const invalidate = () => {
+    void qc.invalidateQueries({ queryKey: ['group-requests', id] });
+    void qc.invalidateQueries({ queryKey: ['group-members', id] });
+    void qc.invalidateQueries({ queryKey: ['group', id] });
+  };
+  const approve = useMutation({
+    mutationFn: (userId: string) => api.post(`/web/groups/${id}/requests/${userId}/approve`),
+    onSuccess: invalidate,
+  });
+  const reject = useMutation({
+    mutationFn: (userId: string) => api.post(`/web/groups/${id}/requests/${userId}/reject`),
+    onSuccess: invalidate,
+  });
+  const remove = useMutation({
+    mutationFn: (userId: string) => api.delete(`/web/groups/${id}/members/${userId}`),
+    onSuccess: invalidate,
+  });
+  return { approve, reject, remove };
+}
+
+/** Reposta/remove post da comunidade NO FEED GERAL (admin). */
+export function useFeaturePost(groupId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ postId, featured }: { postId: string; featured: boolean }) =>
+      featured ? api.delete(`/web/groups/${groupId}/feature/${postId}`) : api.post(`/web/groups/${groupId}/feature/${postId}`),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['group-posts', groupId] });
+      void qc.invalidateQueries({ queryKey: ['feed'] });
+    },
+  });
+}
+
+/** Fixa/desafixa a comunidade (máx. 5 — o back barra o excesso). */
+export function useTogglePinGroup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, pinned }: { id: string; pinned: boolean }) =>
+      pinned ? api.delete(`/web/groups/${id}/pin`) : api.post(`/web/groups/${id}/pin`),
+    onSuccess: (_d, v) => {
+      void qc.invalidateQueries({ queryKey: ['groups'] });
+      void qc.invalidateQueries({ queryKey: ['group', v.id] });
     },
   });
 }
