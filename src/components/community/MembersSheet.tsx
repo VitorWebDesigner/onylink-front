@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Avatar } from '../Avatar';
@@ -9,66 +8,44 @@ import { colors } from '../../theme/colors';
 import { PRESSED_OPACITY } from '../../theme/tokens';
 import { useAuth } from '../../store/auth';
 import { useGroupMembers, useJoinRequests, useModerateMembers } from '../../features/groups/hooks';
+import type { GroupMember } from '../../features/groups/types';
 
-type Tab = 'members' | 'requests';
+export type MembersSheetMode = 'members' | 'requests';
 
 /**
- * Membros da comunidade (decisão §5 item 4): BottomSheet com a lista; tocar →
- * perfil. ADMIN vê a aba Pedidos (privada) com aprovar/recusar e pode remover
- * membro.
+ * Sheet da comunidade em MODO ÚNICO (sem abas — decisão do dono):
+ *  - mode="members": SÓ a lista de membros (seta → sheet de ações).
+ *  - mode="requests": SÓ as solicitações de entrada (aprovar/recusar).
  */
-export function MembersSheet({ groupId, isAdmin, isPrivate, visible, onClose, initialTab = 'members', onSelectMember }: {
+export function MembersSheet({ groupId, mode, visible, onClose, onSelectMember }: {
   groupId: string;
-  isAdmin: boolean;
-  isPrivate: boolean;
+  mode: MembersSheetMode;
   visible: boolean;
   onClose: () => void;
-  /** Abrir direto na aba Pedidos (linha de solicitações da tela de dados). */
-  initialTab?: Tab;
   /** Tocar num membro → a tela hospedeira fecha este sheet e abre o de AÇÕES. */
-  onSelectMember?: (m: import('../../features/groups/types').GroupMember) => void;
+  onSelectMember?: (m: GroupMember) => void;
 }) {
   const router = useRouter();
   const me = useAuth((s) => s.user);
-  const [tab, setTab] = useState<Tab>(initialTab);
-
-  // re-sincroniza a aba a cada abertura
-  const [lastVisible, setLastVisible] = useState(false);
-  if (visible !== lastVisible) {
-    setLastVisible(visible);
-    if (visible) setTab(initialTab);
-  }
-  const { data: members, isLoading } = useGroupMembers(groupId, visible);
-  const { data: requests } = useJoinRequests(groupId, visible && isAdmin && isPrivate);
-  const { approve, reject, remove } = useModerateMembers(groupId);
+  const { data: members, isLoading: loadingMembers } = useGroupMembers(groupId, visible && mode === 'members');
+  const { data: requests, isLoading: loadingRequests } = useJoinRequests(groupId, visible && mode === 'requests');
+  const { approve, reject } = useModerateMembers(groupId);
 
   const open = (id: string) => { onClose(); router.push({ pathname: '/user/[id]', params: { id } }); };
-  const showRequestsTab = isAdmin && isPrivate;
+  const loading = mode === 'members' ? loadingMembers : loadingRequests;
 
   return (
     <BottomSheet visible={visible} onClose={onClose} fullHeight>
       <View className="flex-1">
-        {showRequestsTab ? (
-          <View className="flex-row border-b border-surface-border">
-            {([['members', 'Membros'], ['requests', `Pedidos${requests?.length ? ` (${requests.length})` : ''}`]] as [Tab, string][]).map(([key, label]) => {
-              const active = tab === key;
-              return (
-                <Pressable key={key} onPress={() => setTab(key)} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })} className="flex-1 items-center pb-2.5 pt-1">
-                  <Text className={active ? 'text-ink-900 font-bold text-sm' : 'text-ink-400 font-semibold text-sm'}>{label}</Text>
-                  {active ? <View className="absolute left-10 right-10 bottom-0 h-[2px] rounded-full bg-brand-500" /> : null}
-                </Pressable>
-              );
-            })}
-          </View>
-        ) : (
-          <Text className="text-ink-900 text-lg font-extrabold text-center pb-3">Membros</Text>
-        )}
+        <Text className="text-ink-900 text-lg font-extrabold text-center pb-3">
+          {mode === 'members' ? 'Membros' : 'Solicitações de entrada'}
+        </Text>
 
-        {isLoading ? (
+        {loading ? (
           <View className="flex-1 items-center justify-center"><ActivityIndicator color={colors.brand[500]} /></View>
         ) : (
           <SheetScrollView className="flex-1">
-            {tab === 'members' || !showRequestsTab ? (
+            {mode === 'members' ? (
               <>
                 {(members ?? []).map((m) => (
                   <Pressable

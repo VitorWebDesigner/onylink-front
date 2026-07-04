@@ -274,15 +274,13 @@ export default function CommunityDetails() {
         </ScrollView>
       )}
 
-      {/* membros/pedidos (selecionar membro fecha e abre o sheet de ações) */}
+      {/* membros OU pedidos (modo único — selecionar membro fecha e abre o sheet de ações) */}
       {g ? (
         <MembersSheet
           groupId={g.id}
-          isAdmin={!!isAdmin}
-          isPrivate={g.isPrivate}
+          mode={membersTab}
           visible={membersOpen}
           onClose={() => setMembersOpen(false)}
-          initialTab={membersTab}
           onSelectMember={(m) => { setMembersOpen(false); setTimeout(() => setMemberTarget(m), 250); }}
         />
       ) : null}
