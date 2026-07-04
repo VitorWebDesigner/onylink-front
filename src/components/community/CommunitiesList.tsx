@@ -68,11 +68,17 @@ export function CommunitiesList() {
             <CommunityCircle g={item} />
             <View className="flex-1">
               <View className="flex-row items-center gap-1.5">
-                {item.pinned ? <Icon name="bookmark" set="bold" size={12} color={colors.ink[400]} /> : null}
+                {/* fixada + privada = ícones DISCRETOS (opacidade) ao lado do nome */}
+                {item.pinned ? (
+                  <View style={{ opacity: 0.45 }}><Icon name="bookmark" set="bold" size={12} color={colors.ink[900]} /></View>
+                ) : null}
+                {item.isPrivate ? (
+                  <View style={{ opacity: 0.45 }}><Icon name="lock" set="bold" size={12} color={colors.ink[900]} /></View>
+                ) : null}
                 <Text className="text-ink-900 font-semibold shrink" numberOfLines={1}>{item.name}</Text>
               </View>
               <Text className="text-ink-500 text-[13px]" numberOfLines={1}>
-                {[item.segment, item.city].filter(Boolean).join(' · ')}{item.segment || item.city ? ' · ' : ''}{item.memberCount.toLocaleString('pt-BR')} membros{item.isPrivate ? ' · Privada' : ''}
+                {[item.segment, item.city].filter(Boolean).join(' · ')}{item.segment || item.city ? ' · ' : ''}{item.memberCount.toLocaleString('pt-BR')} membros
               </Text>
               {/* solicitações pendentes (admin): pill LIME própria — bolinha vermelha
                   numérica fica reservada p/ conteúdo NÃO LIDO (chat, Fase B) */}

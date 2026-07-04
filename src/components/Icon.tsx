@@ -19,7 +19,7 @@ export type IconName =
   | 'bag' | 'wallet' | 'chart' | 'calendar'
   | 'sticker' | 'expand' | 'reply' | 'close' | 'video'
   | 'volumeOn' | 'volumeOff' | 'play' | 'pause' | 'eye' | 'trash'
-  | 'link' | 'whatsapp' | 'globe';
+  | 'link' | 'whatsapp' | 'globe' | 'lock';
 
 export type IconSet = 'bold' | 'light' | 'bulk' | 'broken' | 'two-tone' | 'curved';
 
@@ -51,7 +51,7 @@ const MAP: Partial<Record<IconName, ComponentType<any>>> = {
   info: Iconly.InfoCircle, success: Iconly.TickSquare, error: Iconly.Danger,
   document: Iconly.Document, paper: Iconly.Paper, image: Iconly.Image, camera: Iconly.Camera,
   bag: Iconly.Bag, wallet: Iconly.Wallet, chart: Iconly.Chart, calendar: Iconly.Calendar,
-  eye: Iconly.Show, trash: Iconly.Delete,
+  eye: Iconly.Show, trash: Iconly.Delete, lock: Iconly.Lock,
 };
 
 interface Props {
