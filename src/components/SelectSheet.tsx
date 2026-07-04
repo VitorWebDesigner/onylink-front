@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
-import { BottomSheet, SheetScrollView } from './BottomSheet';
+import { BottomSheet, SheetHeader, SheetScrollView } from './BottomSheet';
 import { Icon } from './Icon';
 import { colors } from '../theme/colors';
 import { PRESSED_OPACITY } from '../theme/tokens';
@@ -26,9 +26,9 @@ export function SelectSheet({ visible, onClose, title, options, selected, onSele
   return (
     <BottomSheet visible={visible} onClose={() => { setQ(''); onClose(); }} fullHeight>
       <View className="flex-1">
-        <Text className="text-ink-900 text-lg font-extrabold text-center pb-3">{title}</Text>
+        <SheetHeader title={title} />
         {searchable ? (
-          <View className="px-4 pb-3">
+          <View className="px-4 py-3">
             <TextInput
               value={q}
               onChangeText={setQ}

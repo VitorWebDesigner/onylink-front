@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { PostCard } from '../../components/PostCard';
@@ -14,7 +14,7 @@ import { HIT_SLOP, PRESSED_OPACITY } from '../../theme/tokens';
 import { compactNumber } from '../../lib/format';
 import { useAuth } from '../../store/auth';
 import {
-  useFeed, useRecordView, useTogglePostSubscription,
+  usePost, useRecordView, useTogglePostSubscription,
   useToggleInsight, useToggleLike, useToggleRepost, useToggleShare,
 } from '../../features/feed/hooks';
 import { useFollowFlow } from '../../components/follow/FollowFlowProvider';
@@ -26,7 +26,8 @@ export default function PostDetail() {
   const router = useRouter();
   const toast = useToast();
   const user = useAuth((s) => s.user);
-  const { data: feed } = useFeed();
+  // busca standalone (semente de qualquer lista) — post de COMUNIDADE não está no feed geral
+  const { data: postData, isLoading: loadingPost, error: postError } = usePost(id);
   const toggleInsight = useToggleInsight();
   const toggleLike = useToggleLike();
   const toggleRepost = useToggleRepost();
@@ -44,7 +45,7 @@ export default function PostDetail() {
   const [replyTo, setReplyTo] = useState<CommentNode | null>(null);
   const kbPad = useKeyboardPadding(); // sobe o composer nos DOIS SOs (Android edge-to-edge não redimensiona)
 
-  const post = (feed ?? []).find((p) => p.id === id) ?? null;
+  const post = postData ?? null;
   const count = comments?.length ?? 0;
   const isAuthor = !!post?.authorId && post.authorId === user?.id;
 
@@ -90,7 +91,15 @@ export default function PostDetail() {
 
       {!post ? (
         <View className="flex-1 items-center justify-center">
-          <EmptyState icon="document" title="Publicação não encontrada" />
+          {loadingPost ? (
+            <ActivityIndicator color={colors.brand[500]} />
+          ) : (
+            <EmptyState
+              icon="document"
+              title="Publicação não encontrada"
+              subtitle={postError?.message?.includes('membro') ? 'Só membros da comunidade veem esta publicação.' : undefined}
+            />
+          )}
         </View>
       ) : (
         <View className="flex-1" style={{ paddingBottom: kbPad }}>

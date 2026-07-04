@@ -1,5 +1,5 @@
 import { Linking, Pressable, Text, View } from 'react-native';
-import { BottomSheet } from '../BottomSheet';
+import { BottomSheet, SheetHeader } from '../BottomSheet';
 import { Icon, type IconName } from '../Icon';
 import { colors } from '../../theme/colors';
 import { PRESSED_OPACITY } from '../../theme/tokens';
@@ -29,7 +29,7 @@ export function ContactSheet({ visible, onClose, p }: { visible: boolean; onClos
   return (
     <BottomSheet visible={visible} onClose={onClose}>
       <View className="pb-2">
-        <Text className="text-ink-900 font-bold text-lg px-4 pb-2">Contato</Text>
+        <SheetHeader title="Contato" />
         {p.contactEmail ? (
           <Row icon="message" label="E-mail" value={p.contactEmail} onPress={() => { void Linking.openURL(`mailto:${p.contactEmail}`); onClose(); }} />
         ) : null}

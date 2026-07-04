@@ -1,10 +1,28 @@
+import { View } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
+import { CountBadge } from '../../components/CountBadge';
 import { Icon } from '../../components/Icon';
 import { colors } from '../../theme/colors';
+import { useMessagesBadges } from '../../features/groups/hooks';
 
 /** Botão central "+" — só o ícone (sem caixa), na cor de destaque. */
 function PlusButton() {
   return <Icon name="plus" set="bold" size={30} color={colors.accent[500]} />;
+}
+
+/** Ícone de Mensagens com badge do TOTAL não visto/não resolvido das 3 abas. */
+function MessagesTabIcon({ color, focused }: { color: string; focused: boolean }) {
+  const { total } = useMessagesBadges();
+  return (
+    <View>
+      <Icon name="chat" size={26} color={color} set={focused ? 'bold' : 'light'} />
+      {total > 0 ? (
+        <View style={{ position: 'absolute', top: -5, right: -9 }}>
+          <CountBadge count={total} size={16} />
+        </View>
+      ) : null}
+    </View>
+  );
 }
 
 export default function TabsLayout() {
@@ -29,7 +47,7 @@ export default function TabsLayout() {
         listeners={{ tabPress: (e) => { e.preventDefault(); router.push('/compose'); } }}
       />
 
-      <Tabs.Screen name="messages" options={{ tabBarIcon: ({ color, focused }) => <Icon name="chat" size={26} color={color} set={focused ? 'bold' : 'light'} /> }} />
+      <Tabs.Screen name="messages" options={{ tabBarIcon: ({ color, focused }) => <MessagesTabIcon color={color} focused={focused} /> }} />
       <Tabs.Screen name="profile" options={{ tabBarIcon: ({ color, focused }) => <Icon name="user" size={26} color={color} set={focused ? 'bold' : 'light'} /> }} />
 
       {/* comunidades moram DENTRO de Mensagens — rota escondida do tab bar */}

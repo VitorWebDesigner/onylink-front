@@ -107,7 +107,8 @@ export function CommentsSheet({ postId, onClose }: { postId: string; onClose: ()
           <View className="items-center pt-2.5 pb-1">
             <View className="w-10 h-1.5 rounded-full" style={{ backgroundColor: '#C7C9CE' }} />
           </View>
-          <View className="flex-row items-center px-4 pb-3 border-b border-surface-border">
+          {/* mesmo tamanho de header do compose (§13) */}
+          <View className="flex-row items-center px-4 py-6 border-b border-surface-border">
             <Text className="text-ink-900 font-semibold text-base flex-1">Comentários{count ? ` (${count})` : ''}</Text>
             <Pressable onPress={dismiss} hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
               <Icon name="close" size={22} color={colors.ink[500]} />

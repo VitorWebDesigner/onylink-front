@@ -3,6 +3,7 @@ import { FlatList, Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Button } from '../Button';
+import { CountBadge } from '../CountBadge';
 import { Icon, type IconName } from '../Icon';
 import { EmptyState } from '../EmptyState';
 import { colors } from '../../theme/colors';
@@ -91,6 +92,8 @@ export function CommunitiesList() {
                 </View>
               ) : null}
             </View>
+            {/* posts NÃO VISTOS desde a última visita (bolinha vermelha, padrão WhatsApp) */}
+            <CountBadge count={item.unreadPosts ?? 0} />
             <Button
               title={joinLabel(item)}
               variant={item.joined || item.requested ? 'secondary' : 'accent'}

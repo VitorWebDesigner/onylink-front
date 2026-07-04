@@ -1,7 +1,7 @@
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Avatar } from '../Avatar';
-import { BottomSheet, SheetScrollView } from '../BottomSheet';
+import { BottomSheet, SheetHeader, SheetScrollView } from '../BottomSheet';
 import { Button } from '../Button';
 import { Icon } from '../Icon';
 import { colors } from '../../theme/colors';
@@ -37,9 +37,7 @@ export function MembersSheet({ groupId, mode, visible, onClose, onSelectMember }
   return (
     <BottomSheet visible={visible} onClose={onClose} fullHeight>
       <View className="flex-1">
-        <Text className="text-ink-900 text-lg font-extrabold text-center pb-3">
-          {mode === 'members' ? 'Membros' : 'Solicitações de entrada'}
-        </Text>
+        <SheetHeader title={mode === 'members' ? 'Membros' : 'Solicitações de entrada'} />
 
         {loading ? (
           <View className="flex-1 items-center justify-center"><ActivityIndicator color={colors.brand[500]} /></View>

@@ -205,7 +205,9 @@ export default function Compose() {
           <View className="flex-1 gap-2">
             <Text className="text-ink-900 font-semibold text-sm">{handleOf(user)}</Text>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 16 }}>
+            {/* keyboardShouldPersistTaps: ScrollView ANINHADA não herda do pai — sem isso,
+                tocar numa #hashtag com o teclado aberto só FECHAVA o teclado (2 toques) */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="always" contentContainerStyle={{ gap: 8, paddingRight: 16 }}>
               {CATEGORIES.map((c) => (
                 <Chip key={c} label={`#${c}`} selected={category === c} onPress={() => setCategory(c)} />
               ))}
@@ -236,6 +238,7 @@ export default function Compose() {
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
+                  keyboardShouldPersistTaps="always"
                   style={stripLeft != null ? { width: screenW, marginLeft: -stripLeft } : undefined}
                   contentContainerStyle={{ gap: 10, paddingVertical: 2, paddingLeft: stripLeft ?? 0, paddingRight: 16 }}
                 >

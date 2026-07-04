@@ -23,6 +23,10 @@ export interface Group {
   createdAt?: string | null;
   /** Pedidos pendentes (>0 só para ADMIN — badge nas listas/telas). */
   pendingRequests: number;
+  /** Posts publicados por OUTROS depois da minha última visita ao feed da
+   *  comunidade (badge vermelho de não visto — some ao abrir a comunidade).
+   *  Opcional só p/ os mocks offline; o toGroup sempre preenche. */
+  unreadPosts?: number;
   /** Só no mock offline (ícone ilustrativo — Ionicon). */
   icon?: string;
 }
@@ -65,6 +69,7 @@ export interface RawGroupRow {
   created_by?: string | null;
   created_at?: string;
   pending_requests?: number;
+  unread_posts?: number;
 }
 
 export const toGroup = (r: RawGroupRow): Group => ({
@@ -86,4 +91,5 @@ export const toGroup = (r: RawGroupRow): Group => ({
   createdBy: r.created_by ?? null,
   createdAt: r.created_at ?? null,
   pendingRequests: r.pending_requests ?? 0,
+  unreadPosts: r.unread_posts ?? 0,
 });

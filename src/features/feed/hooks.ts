@@ -5,6 +5,42 @@ import { mockFeed } from '../../lib/mock';
 import { applyCommentReaction, type CommentReactionKind } from '../comments/hooks';
 import { toFeedPost, type FeedPost, type PostCategory, type RawFeedRow } from './types';
 
+/**
+ * Um post pode viver em VÁRIOS caches ao mesmo tempo: feed geral, feed de
+ * comunidade (group-posts), abas do perfil (user-posts/user-reposts), busca
+ * (search-posts) e o detalhe standalone (['post', id]). TODO toggle otimista
+ * passa por aqui — senão post de comunidade (fora do feed geral) não reflete
+ * a reação em lugar nenhum (bug real).
+ */
+const POST_LIST_KEYS = [['feed'], ['group-posts'], ['user-posts'], ['user-reposts'], ['search-posts']] as const;
+
+export function patchPostCaches(qc: QueryClient, postId: string, patch: (p: FeedPost) => FeedPost) {
+  for (const key of POST_LIST_KEYS) {
+    qc.setQueriesData<FeedPost[]>({ queryKey: key }, (old) =>
+      old?.map((p) => (p.id === postId ? patch(p) : p)),
+    );
+  }
+  qc.setQueryData<FeedPost>(['post', postId], (old) => (old ? patch(old) : old));
+}
+
+/** Idem, mas por AUTOR (pílula Seguir replicada em todos os posts dele). */
+function patchAuthorCaches(qc: QueryClient, authorId: string, patch: (p: FeedPost) => FeedPost) {
+  for (const key of POST_LIST_KEYS) {
+    qc.setQueriesData<FeedPost[]>({ queryKey: key }, (old) =>
+      old?.map((p) => (p.authorId === authorId ? patch(p) : p)),
+    );
+  }
+  qc.setQueriesData<FeedPost>({ queryKey: ['post'] }, (old) =>
+    old && old.authorId === authorId ? patch(old) : old,
+  );
+}
+
+/** Desfaz otimista re-buscando tudo que pode ter sido tocado (erro é raro). */
+function invalidatePostCaches(qc: QueryClient, postId?: string) {
+  for (const key of POST_LIST_KEYS) void qc.invalidateQueries({ queryKey: key });
+  if (postId) void qc.invalidateQueries({ queryKey: ['post', postId] });
+}
+
 interface RawLiveRow {
   id: string;
   like_count: number;
@@ -86,19 +122,13 @@ export function useToggleTopCommentReaction() {
     },
     onMutate: async ({ postId, commentId, kind, active }) => {
       await qc.cancelQueries({ queryKey: ['feed'] });
-      const prev = qc.getQueryData<FeedPost[]>(['feed']);
-      qc.setQueryData<FeedPost[]>(['feed'], (old) =>
-        (old ?? []).map((p) =>
-          p.id === postId && p.topComment && p.topComment.id === commentId
-            ? { ...p, topComment: applyCommentReaction(p.topComment, kind, active) }
-            : p,
-        ),
+      patchPostCaches(qc, postId, (p) =>
+        p.topComment && p.topComment.id === commentId
+          ? { ...p, topComment: applyCommentReaction(p.topComment, kind, active) }
+          : p,
       );
-      return { prev };
     },
-    onError: (_e, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(['feed'], ctx.prev);
-    },
+    onError: (_e, v) => invalidatePostCaches(qc, v.postId),
   });
 }
 
@@ -112,9 +142,7 @@ export function useRecordView() {
     },
     onSuccess: (data, postId) => {
       if (!data) return;
-      qc.setQueryData<FeedPost[]>(['feed'], (old) =>
-        (old ?? []).map((p) => (p.id === postId ? { ...p, viewCount: data.viewCount } : p)),
-      );
+      patchPostCaches(qc, postId, (p) => ({ ...p, viewCount: data.viewCount }));
     },
   });
 }
@@ -129,15 +157,9 @@ export function useTogglePostSubscription() {
     },
     onMutate: async ({ postId, subscribed }) => {
       await qc.cancelQueries({ queryKey: ['feed'] });
-      const prev = qc.getQueryData<FeedPost[]>(['feed']);
-      qc.setQueryData<FeedPost[]>(['feed'], (old) =>
-        (old ?? []).map((p) => (p.id === postId ? { ...p, subscribed: !subscribed } : p)),
-      );
-      return { prev };
+      patchPostCaches(qc, postId, (p) => ({ ...p, subscribed: !subscribed }));
     },
-    onError: (_e, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(['feed'], ctx.prev);
-    },
+    onError: (_e, v) => invalidatePostCaches(qc, v.postId),
   });
 }
 
@@ -151,25 +173,18 @@ export function useToggleFollowAuthor() {
     },
     onMutate: async ({ authorId, following }) => {
       await qc.cancelQueries({ queryKey: ['feed'] });
-      const prev = qc.getQueryData<FeedPost[]>(['feed']);
-      qc.setQueryData<FeedPost[]>(['feed'], (old) =>
-        (old ?? []).map((p) => (p.authorId === authorId ? { ...p, authorFollowed: !following } : p)),
-      );
-      // reflete também nas LISTAS DE POSTS DE PERFIL abertas (pílula Seguir do card)
-      qc.setQueriesData<FeedPost[]>({ queryKey: ['user-posts'] }, (old) =>
-        old?.map((p) => (p.authorId === authorId ? { ...p, authorFollowed: !following } : p)),
-      );
+      // pílula Seguir replicada em TODAS as listas + detalhe standalone
+      patchAuthorCaches(qc, authorId, (p) => ({ ...p, authorFollowed: !following }));
       // e na tela de perfil do usuário, se aberta
       const prevUser = qc.getQueryData<{ id: string; followed: boolean; followersCount: number }>(['user', authorId]);
       if (prevUser) {
         qc.setQueryData(['user', authorId], { ...prevUser, followed: !following, followersCount: prevUser.followersCount + (following ? -1 : 1) });
       }
-      return { prev, prevUser };
+      return { prevUser };
     },
     onError: (_e, v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(['feed'], ctx.prev);
       if (ctx?.prevUser) qc.setQueryData(['user', v.authorId], ctx.prevUser);
-      void qc.invalidateQueries({ queryKey: ['user-posts'] }); // desfaz o otimista das listas de perfil
+      invalidatePostCaches(qc); // desfaz o otimista das listas
     },
   });
 }
@@ -206,6 +221,41 @@ export function useFeed() {
   });
 }
 
+/**
+ * Um post pelo id, na forma do feed (estado do leitor incluso).
+ * Semente: procura o post em qualquer lista já carregada (feed, comunidade,
+ * perfil, busca) → detalhe abre instantâneo; em paralelo busca a versão fresca
+ * do back (GET /web/posts/:id). ESSENCIAL p/ post de COMUNIDADE, que não está
+ * no cache do feed geral (antes o detalhe dava "Publicação não encontrada").
+ */
+export function usePost(postId: string) {
+  const qc = useQueryClient();
+  return useQuery({
+    queryKey: ['post', postId],
+    enabled: !!postId,
+    staleTime: 15_000,
+    retry: false, // 403 de comunidade não deve re-tentar
+    queryFn: async (): Promise<FeedPost> => {
+      if (config.mock.feed) {
+        const hit = mockFeed.find((p) => p.id === postId);
+        if (!hit) throw new Error('Post não encontrado.');
+        return hit;
+      }
+      const row = await api.get<RawFeedRow>(`/web/posts/${postId}`);
+      return toFeedPost(row);
+    },
+    initialData: () => {
+      for (const key of POST_LIST_KEYS) {
+        for (const [, list] of qc.getQueriesData<FeedPost[]>({ queryKey: key })) {
+          const hit = list?.find((p) => p.id === postId);
+          if (hit) return hit;
+        }
+      }
+      return undefined;
+    },
+  });
+}
+
 export function useCreatePost() {
   const qc = useQueryClient();
   return useMutation({
@@ -234,18 +284,10 @@ export function useToggleLike() {
     },
     onMutate: async ({ postId, liked }) => {
       await qc.cancelQueries({ queryKey: ['feed'] });
-      const prev = qc.getQueryData<FeedPost[]>(['feed']);
-      qc.setQueryData<FeedPost[]>(['feed'], (old) =>
-        (old ?? []).map((p) =>
-          p.id === postId ? { ...p, liked: !liked, likeCount: p.likeCount + (liked ? -1 : 1) } : p,
-        ),
-      );
-      return { prev };
+      patchPostCaches(qc, postId, (p) => ({ ...p, liked: !liked, likeCount: p.likeCount + (liked ? -1 : 1) }));
     },
-    onError: (_e, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(['feed'], ctx.prev);
-    },
-    // Sem invalidate: o otimista já reflete o estado real → atualização imperceptível.
+    onError: (_e, v) => invalidatePostCaches(qc, v.postId),
+    // Sem invalidate no sucesso: o otimista já reflete o estado real.
   });
 }
 
@@ -259,15 +301,11 @@ export function useToggleRepost() {
     },
     onMutate: async ({ postId, reposted }) => {
       await qc.cancelQueries({ queryKey: ['feed'] });
-      const prev = qc.getQueryData<FeedPost[]>(['feed']);
-      qc.setQueryData<FeedPost[]>(['feed'], (old) =>
-        (old ?? []).map((p) => (p.id === postId ? { ...p, reposted: !reposted, repostCount: p.repostCount + (reposted ? -1 : 1) } : p)),
-      );
-      return { prev };
+      patchPostCaches(qc, postId, (p) => ({ ...p, reposted: !reposted, repostCount: p.repostCount + (reposted ? -1 : 1) }));
     },
-    onError: (_e, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(['feed'], ctx.prev);
-    },
+    onError: (_e, v) => invalidatePostCaches(qc, v.postId),
+    // aba Reposts do perfil lista/retira o post → refetch silencioso
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['user-reposts'] }),
   });
 }
 
@@ -281,15 +319,9 @@ export function useToggleShare() {
     },
     onMutate: async ({ postId, shared }) => {
       await qc.cancelQueries({ queryKey: ['feed'] });
-      const prev = qc.getQueryData<FeedPost[]>(['feed']);
-      qc.setQueryData<FeedPost[]>(['feed'], (old) =>
-        (old ?? []).map((p) => (p.id === postId ? { ...p, shared: !shared, shareCount: p.shareCount + (shared ? -1 : 1) } : p)),
-      );
-      return { prev };
+      patchPostCaches(qc, postId, (p) => ({ ...p, shared: !shared, shareCount: p.shareCount + (shared ? -1 : 1) }));
     },
-    onError: (_e, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(['feed'], ctx.prev);
-    },
+    onError: (_e, v) => invalidatePostCaches(qc, v.postId),
   });
 }
 
@@ -303,14 +335,8 @@ export function useToggleInsight() {
     },
     onMutate: async ({ postId, insighted }) => {
       await qc.cancelQueries({ queryKey: ['feed'] });
-      const prev = qc.getQueryData<FeedPost[]>(['feed']);
-      qc.setQueryData<FeedPost[]>(['feed'], (old) =>
-        (old ?? []).map((p) => (p.id === postId ? { ...p, insighted: !insighted, insightCount: p.insightCount + (insighted ? -1 : 1) } : p)),
-      );
-      return { prev };
+      patchPostCaches(qc, postId, (p) => ({ ...p, insighted: !insighted, insightCount: p.insightCount + (insighted ? -1 : 1) }));
     },
-    onError: (_e, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(['feed'], ctx.prev);
-    },
+    onError: (_e, v) => invalidatePostCaches(qc, v.postId),
   });
 }

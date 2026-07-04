@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { PostCard } from '../../components/PostCard';
@@ -8,6 +9,8 @@ import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { Icon } from '../../components/Icon';
 import { CommunityCircle } from '../../components/community/CommunitiesList';
+import { CountBadge } from '../../components/CountBadge';
+import type { Group } from '../../features/groups/types';
 import { colors } from '../../theme/colors';
 import { HIT_SLOP, PRESSED_OPACITY } from '../../theme/tokens';
 import { useFeaturePost, useGroup, useGroupPosts, useToggleJoin } from '../../features/groups/hooks';
@@ -40,6 +43,16 @@ export default function CommunityFeed() {
   const toggleShare = useToggleShare();
   const toggleTopComment = useToggleTopCommentReaction();
   const [adminTarget, setAdminTarget] = useState<FeedPost | null>(null);
+  const qc = useQueryClient();
+
+  // abrir o feed marca "visto" no back — zera a bolinha de não visto na hora,
+  // sem esperar o próximo refetch/polling da lista
+  useEffect(() => {
+    if (!isMember || !posts) return;
+    qc.setQueriesData<Group[]>({ queryKey: ['groups'] }, (old) =>
+      old?.map((g) => (g.id === id ? { ...g, unreadPosts: 0 } : g)),
+    );
+  }, [isMember, posts, id, qc]);
 
   const openDetails = () => router.push({ pathname: '/group/details', params: { id } });
 
@@ -68,8 +81,8 @@ export default function CommunityFeed() {
           <Pressable onPress={openDetails} hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
             <View>
               <Icon name="bell" set="light" size={24} color={colors.ink[900]} />
-              <View className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] rounded-full bg-danger items-center justify-center px-1">
-                <Text className="text-white text-[10px] font-bold">{group.pendingRequests > 99 ? '99+' : group.pendingRequests}</Text>
+              <View className="absolute -top-1.5 -right-2">
+                <CountBadge count={group.pendingRequests} size={16} />
               </View>
             </View>
           </Pressable>

@@ -6,6 +6,7 @@ export { Screen } from './Screen';
 export { TextLink } from './TextLink';
 export { Logo } from './Logo';
 export { Chip } from './Chip';
+export { CountBadge } from './CountBadge';
 export { SocialButton } from './SocialButton';
 export { Icon, type IconName } from './Icon';
 export { EmptyState } from './EmptyState';

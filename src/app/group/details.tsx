@@ -4,7 +4,8 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '../../components/Avatar';
-import { BottomSheet, SheetScrollView } from '../../components/BottomSheet';
+import { BottomSheet, SheetHeader, SheetScrollView } from '../../components/BottomSheet';
+import { CountBadge } from '../../components/CountBadge';
 import { EmptyState } from '../../components/EmptyState';
 import { Icon, type IconName } from '../../components/Icon';
 import { MemberActionsSheet } from '../../components/community/MemberActionsSheet';
@@ -40,11 +41,7 @@ function Row({ icon, label, sub, badge, danger, onPress }: {
         <Text className={['font-semibold text-[15px]', danger ? 'text-danger' : 'text-ink-900'].join(' ')}>{label}</Text>
         {sub ? <Text className="text-ink-500 text-[13px]">{sub}</Text> : null}
       </View>
-      {badge ? (
-        <View className="min-w-[22px] h-[22px] rounded-full bg-danger items-center justify-center px-1.5">
-          <Text className="text-white text-xs font-bold">{badge > 99 ? '99+' : badge}</Text>
-        </View>
-      ) : null}
+      {badge ? <CountBadge count={badge} size={22} /> : null}
       {!danger ? <Icon name="forward" set="light" size={16} color={colors.ink[400]} /> : null}
     </Pressable>
   );
@@ -300,23 +297,29 @@ export default function CommunityDetails() {
       {/* mídia da comunidade */}
       <BottomSheet visible={mediaOpen} onClose={() => setMediaOpen(false)} fullHeight>
         <View className="flex-1">
-          <Text className="text-ink-900 text-lg font-extrabold text-center pb-3">Mídia da comunidade</Text>
+          <SheetHeader title="Mídia da comunidade" />
           {mediaItems.length ? (
             <SheetScrollView className="flex-1">
               <View className="flex-row flex-wrap">
+                {/* tamanho da célula em style ESTÁTICO num View externo (§13) — no retorno de
+                    style-função do Pressable o NativeWind derrubava pra 0×0 e a grade sumia
+                    (a row dizia "1 arquivo" e o sheet parecia vazio). Fundo muted garante
+                    célula visível mesmo com thumbnail de vídeo ainda processando na Bunny. */}
                 {mediaItems.map((m, i) => (
-                  <Pressable
-                    key={m.key}
-                    onPress={() => { setMediaOpen(false); router.push({ pathname: '/post/[id]', params: { id: m.postId } }); }}
-                    style={({ pressed }) => ({ width: cell, height: cell, marginLeft: i % 3 === 0 ? 0 : 2, marginBottom: 2, opacity: pressed ? 0.92 : 1 })}
-                  >
-                    <Image source={{ uri: m.uri }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-                    {m.type === 'VIDEO' ? (
-                      <View style={{ position: 'absolute', top: 6, right: 6 }}>
-                        <Icon name="play" size={14} color="#FFFFFF" />
-                      </View>
-                    ) : null}
-                  </Pressable>
+                  <View key={m.key} style={{ width: cell, height: cell, marginLeft: i % 3 === 0 ? 0 : 2, marginBottom: 2 }} className="bg-surface-muted">
+                    <Pressable
+                      onPress={() => { setMediaOpen(false); router.push({ pathname: '/post/[id]', params: { id: m.postId } }); }}
+                      style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1 })}
+                      className="flex-1"
+                    >
+                      {m.uri ? <Image source={{ uri: m.uri }} style={{ width: '100%', height: '100%' }} contentFit="cover" /> : null}
+                      {m.type === 'VIDEO' ? (
+                        <View style={{ position: 'absolute', top: 6, right: 6 }}>
+                          <Icon name="play" size={14} color="#FFFFFF" />
+                        </View>
+                      ) : null}
+                    </Pressable>
+                  </View>
                 ))}
               </View>
             </SheetScrollView>
@@ -331,8 +334,8 @@ export default function CommunityDetails() {
       {/* buscar nas publicações da comunidade */}
       <BottomSheet visible={searchOpen} onClose={() => { setSearchOpen(false); setSearchQ(''); }} fullHeight>
         <View className="flex-1">
-          <Text className="text-ink-900 text-lg font-extrabold text-center pb-3">Buscar na comunidade</Text>
-          <View className="px-4 pb-3">
+          <SheetHeader title="Buscar na comunidade" />
+          <View className="px-4 py-3">
             <TextInput
               value={searchQ}
               onChangeText={setSearchQ}

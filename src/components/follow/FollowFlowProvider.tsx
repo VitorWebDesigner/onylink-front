@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Avatar } from '../Avatar';
 import { Button } from '../Button';
-import { BottomSheet, SheetScrollView, SHEET_BG, sheetShadow } from '../BottomSheet';
+import { BottomSheet, SheetHeader, SheetScrollView, SHEET_BG, sheetShadow } from '../BottomSheet';
 import { colors } from '../../theme/colors';
 import { PRESSED_OPACITY } from '../../theme/tokens';
 import { useToggleFollowAuthor } from '../../features/feed/hooks';
@@ -57,7 +57,7 @@ function Suggestions({ seed, onDone }: { seed: FollowTarget; onDone: () => void 
 
   return (
     <View className="flex-1">
-      <Text className="text-ink-900 text-lg font-extrabold text-center pt-1 pb-3">Sugestões para você</Text>
+      <SheetHeader title="Sugestões para você" />
       {isLoading ? (
         <View className="flex-1 items-center justify-center"><ActivityIndicator color={colors.brand[500]} /></View>
       ) : data?.length ? (

@@ -5,18 +5,33 @@ import { mockGroups, mockGroupPosts } from '../../lib/mock';
 import { toFeedPost, type FeedPost, type RawFeedRow } from '../feed/types';
 import { toGroup, type Group, type GroupMember, type JoinRequest, type RawGroupRow } from './types';
 
-/** Lista de comunidades. `mine` → só as que sou membro. Fixadas vêm primeiro. */
-export function useGroups(opts?: { mine?: boolean }) {
+/** Lista de comunidades. `mine` → só as que sou membro. Fixadas vêm primeiro.
+ *  `poll` → refetch a cada 30s (badges de não visto/pedidos ao vivo). */
+export function useGroups(opts?: { mine?: boolean; poll?: boolean }) {
   const mine = !!opts?.mine;
   return useQuery({
     queryKey: ['groups', mine ? 'mine' : 'all'],
     staleTime: 0,
+    refetchInterval: opts?.poll ? 30_000 : undefined,
     queryFn: async (): Promise<Group[]> => {
       if (config.mock.groups) return mine ? mockGroups.filter((g) => g.joined) : mockGroups;
       const rows = await api.get<RawGroupRow[]>(`/web/groups${mine ? '?mine=1' : ''}`);
       return (rows ?? []).map(toGroup);
     },
   });
+}
+
+/**
+ * Badges da tela Mensagens (e do ícone na tab bar): soma o NÃO VISTO/NÃO
+ * RESOLVIDO por aba. Comunidades = posts não vistos + pedidos de entrada
+ * pendentes (das minhas). Conversas e Grupos = Fase B (0 por ora).
+ */
+export function useMessagesBadges() {
+  const { data: mine } = useGroups({ mine: true, poll: true });
+  const communities = (mine ?? []).reduce((acc, g) => acc + (g.unreadPosts ?? 0) + (g.pendingRequests ?? 0), 0);
+  const chats = 0; // mensagens 1:1 reais = Fase B
+  const groups = 0; // grupos de chat = Fase B
+  return { chats, groups, communities, total: chats + groups + communities };
 }
 
 /** Uma comunidade por id (ou slug). */

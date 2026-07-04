@@ -6,10 +6,12 @@ import { Avatar } from '../../components/Avatar';
 import { EmptyState } from '../../components/EmptyState';
 import { Icon } from '../../components/Icon';
 import { CommunitiesList } from '../../components/community/CommunitiesList';
+import { CountBadge } from '../../components/CountBadge';
 import { colors } from '../../theme/colors';
 import { HIT_SLOP, PRESSED_OPACITY } from '../../theme/tokens';
 import { timeAgo } from '../../lib/time';
 import { useMe } from '../../features/users/hooks';
+import { useMessagesBadges } from '../../features/groups/hooks';
 
 type Seg = 'chats' | 'groups' | 'communities';
 
@@ -20,7 +22,7 @@ const CONVERSATIONS = [
   { id: 'cv3', name: 'Marina Souza', last: 'Boa! Bora marcar um café.', at: '2026-06-28T17:05:00.000Z' },
 ];
 
-function Segment({ value, onChange }: { value: Seg; onChange: (s: Seg) => void }) {
+function Segment({ value, onChange, badges }: { value: Seg; onChange: (s: Seg) => void; badges: Record<Seg, number> }) {
   const items: { key: Seg; label: string }[] = [
     { key: 'chats', label: 'Conversas' },
     { key: 'groups', label: 'Grupos' },
@@ -32,7 +34,11 @@ function Segment({ value, onChange }: { value: Seg; onChange: (s: Seg) => void }
         const active = value === it.key;
         return (
           <Pressable key={it.key} onPress={() => onChange(it.key)} className={['flex-1 items-center py-3 border-b-2', active ? 'border-brand-500' : 'border-transparent'].join(' ')}>
-            <Text className={active ? 'text-ink-900 font-semibold' : 'text-ink-500'}>{it.label}</Text>
+            <View className="flex-row items-center gap-1.5">
+              <Text className={active ? 'text-ink-900 font-semibold' : 'text-ink-500'}>{it.label}</Text>
+              {/* soma do NÃO VISTO/NÃO RESOLVIDO da aba (posts novos + pedidos) */}
+              <CountBadge count={badges[it.key]} size={16} />
+            </View>
           </Pressable>
         );
       })}
@@ -44,6 +50,7 @@ export default function Messages() {
   const router = useRouter();
   const [seg, setSeg] = useState<Seg>('chats');
   const { data: me } = useMe();
+  const badges = useMessagesBadges();
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
@@ -56,7 +63,7 @@ export default function Messages() {
           </Pressable>
         ) : null}
       </View>
-      <Segment value={seg} onChange={setSeg} />
+      <Segment value={seg} onChange={setSeg} badges={{ chats: badges.chats, groups: badges.groups, communities: badges.communities }} />
 
       {seg === 'chats' ? (
         <FlatList

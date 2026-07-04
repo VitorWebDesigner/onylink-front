@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ComponentProps, type ReactNode } from 'react';
-import { Dimensions, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Dimensions, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   runOnJS, useAnimatedRef, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue, withSpring, withTiming,
   type AnimatedRef, type SharedValue,
@@ -19,6 +19,17 @@ export const sheetShadow = {
   shadowRadius: 16,
   elevation: 16,
 } as const;
+
+/** Header padrão de sheet COM TÍTULO — mesmo tamanho do header do compose
+ *  ("Nova publicação": py-7, título text-base font-semibold centrado, borda
+ *  inferior). Use em TODO sheet titulado (§13 — pedido do dono). */
+export function SheetHeader({ title }: { title: string }) {
+  return (
+    <View className="items-center justify-center px-4 py-7 border-b border-surface-border">
+      <Text className="text-ink-900 font-semibold text-base">{title}</Text>
+    </View>
+  );
+}
 
 // mesma sensação do modal nativo do compose (fechar com arrasto)
 const SPRING = { damping: 22, stiffness: 220, mass: 0.6 } as const;
