@@ -20,6 +20,9 @@ const KIND_META: Record<string, { text: string; icon: IconName; color: string }>
   SUBSCRIBED: { text: 'comentou numa publicação que você acompanha', icon: 'bell', color: colors.brand[500] },
   FOLLOW: { text: 'começou a seguir você', icon: 'user', color: colors.brand[500] },
   APPLICATION: { text: 'se candidatou à sua oportunidade', icon: 'work', color: colors.brand[500] },
+  JOIN_REQUEST: { text: 'pediu para entrar na sua comunidade', icon: 'groups', color: colors.brand[500] },
+  JOIN_APPROVED: { text: 'aprovou sua entrada na comunidade', icon: 'success', color: colors.brand[500] },
+  GROUP_POST: { text: 'publicou na comunidade', icon: 'groups', color: colors.brand[500] },
   CONNECTION: { text: 'enviou um convite de conexão', icon: 'connector', color: colors.brand[500] },
   CONNECTION_ACCEPTED: { text: 'aceitou sua conexão', icon: 'connector', color: colors.brand[500] },
   MESSAGE: { text: 'enviou uma mensagem', icon: 'message', color: colors.brand[500] },
@@ -53,6 +56,10 @@ export default function NotificationsScreen() {
       if (n.opportunityId) router.push({ pathname: '/opportunity/applications/[id]', params: { id: n.opportunityId } });
       return;
     }
+    if (n.kind === 'JOIN_REQUEST' || n.kind === 'JOIN_APPROVED') {
+      if (n.groupId) router.push({ pathname: '/group/[id]', params: { id: n.groupId } });
+      return;
+    }
     if (n.postId) router.push({ pathname: '/post/[id]', params: { id: n.postId } });
   }
 
@@ -74,6 +81,8 @@ export default function NotificationsScreen() {
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} tintColor={colors.brand[500]} />}
           renderItem={({ item: n }) => {
             const meta = KIND_META[n.kind] ?? { text: 'interagiu com você', icon: 'bell' as IconName, color: colors.brand[500] };
+            // GROUP_POST leva o nome da comunidade no texto
+            const text = n.kind === 'GROUP_POST' && n.groupName ? `publicou em ${n.groupName}` : meta.text;
             return (
               <Pressable
                 onPress={() => open(n)}
@@ -96,7 +105,7 @@ export default function NotificationsScreen() {
                 <View className="flex-1">
                   <Text className="text-ink-700 leading-5" numberOfLines={2}>
                     {n.actorName ? <Text className="text-ink-900 font-semibold">{n.actorName} </Text> : null}
-                    {meta.text}
+                    {text}
                     {n.preview ? <Text className="text-ink-500">{` · “${n.preview}”`}</Text> : null}
                   </Text>
                   <Text className="text-ink-400 text-xs mt-0.5">{timeAgo(n.createdAt)}</Text>

@@ -33,10 +33,14 @@ export function useUserOpportunities(id: string, enabled = true) {
   });
 }
 
-/** Uma oportunidade pelo id. Backend: GET /web/opportunities/:id. */
+/** Uma oportunidade pelo id. Backend: GET /web/opportunities/:id.
+ *  TEMPO REAL: refetch 10s (mesmo padrão do detalhe do post) — reações e
+ *  contadores de terceiros sobem sozinhos; pausa durante mutação otimista. */
 export function useOpportunity(id: string) {
+  const qc = useQueryClient();
   return useQuery({
     queryKey: ['opportunity', id],
+    refetchInterval: () => (qc.isMutating() ? false : 10_000),
     queryFn: async (): Promise<Opportunity | null> => {
       if (config.mock.opportunities) return mockOpportunities.find((o) => o.id === id) ?? null;
       const row = await api.get<RawOpportunityRow>(`/web/opportunities/${id}`);
@@ -198,8 +202,11 @@ const toOppComment = (r: RawOppComment): OpportunityComment => ({
 
 /** Comentários de uma oportunidade (threading). Backend: GET /web/opportunities/:id/comments. */
 export function useOppComments(id: string) {
+  const qc = useQueryClient();
   return useQuery({
     queryKey: commentsKey(id),
+    // TEMPO REAL: comentários de terceiros aparecem sozinhos (padrão do post)
+    refetchInterval: () => (qc.isMutating() ? false : 10_000),
     queryFn: async (): Promise<OpportunityComment[]> => {
       if (config.mock.opportunities) return [];
       const rows = await api.get<RawOppComment[]>(`/web/opportunities/${id}/comments`);
@@ -317,8 +324,12 @@ export function useApply(id: string) {
 
 /** Candidaturas de uma oportunidade (só dono). GET /web/opportunities/:id/applications. */
 export function useApplications(id: string) {
+  const qc = useQueryClient();
   return useQuery({
     queryKey: ['opportunity-applications', id],
+    staleTime: 0,
+    // candidaturas novas de terceiros entram sozinhas com a tela aberta
+    refetchInterval: () => (qc.isMutating() ? false : 15_000),
     queryFn: async (): Promise<OpportunityApplication[]> => {
       if (config.mock.opportunities) return [];
       const rows = await api.get<RawApplicationRow[]>(`/web/opportunities/${id}/applications`);

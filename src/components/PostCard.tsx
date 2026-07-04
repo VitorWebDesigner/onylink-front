@@ -10,7 +10,8 @@ import { useMediaUi } from '../store/mediaUi';
 import { colors } from '../theme/colors';
 import { HIT_SLOP, PRESSED_OPACITY } from '../theme/tokens';
 import { timeAgo } from '../lib/time';
-import type { FeedPost } from '../features/feed/types';
+import { useAuth } from '../store/auth';
+import { canRepostPost, type FeedPost } from '../features/feed/types';
 import type { CommentReactionKind } from '../features/comments/hooks';
 
 const THREAD_LINE = '#D6D8DD'; // linha de thread discreta (item 6)
@@ -88,6 +89,9 @@ export function PostCard({ post, onToggleInsight, onToggleLike, onToggleRepost, 
   const showFollow = !!onToggleFollow && !isAuthor;
   const mediaViewer = useMediaViewer();
   const reactionPicker = useReactionPicker();
+  const me = useAuth((s) => s.user);
+  // post de comunidade não destacado: repostar só aparece pro DONO da comunidade
+  const canRepost = canRepostPost(post, me?.id);
   const activePostId = useMediaUi((s) => s.activePostId);
   const videoActive = !!detail || activePostId === post.id; // detalhe sempre toca; feed só o visível
 
@@ -113,7 +117,9 @@ export function PostCard({ post, onToggleInsight, onToggleLike, onToggleRepost, 
       <AnimatedReaction icon="insight" active={post.insighted} activeColor={colors.action.insight} count={post.insightCount} onPress={onToggleInsight ? () => onToggleInsight(post) : undefined} />
       <AnimatedReaction icon="heart" active={post.liked} activeColor={colors.action.like} count={post.likeCount} onPress={onToggleLike ? () => onToggleLike(post) : undefined} />
       <AnimatedReaction icon="comment" active={post.commentCount > 0} activeColor={colors.action.comment} count={post.commentCount} onPress={comment ? () => comment(post) : undefined} />
-      <AnimatedReaction icon="repost" active={post.reposted} activeColor={colors.action.repost} count={post.repostCount} onPress={onToggleRepost ? () => onToggleRepost(post) : undefined} />
+      {canRepost ? (
+        <AnimatedReaction icon="repost" active={post.reposted} activeColor={colors.action.repost} count={post.repostCount} onPress={onToggleRepost ? () => onToggleRepost(post) : undefined} />
+      ) : null}
       <AnimatedReaction icon="send" active={post.shared} activeColor={colors.action.send} count={post.shareCount} onPress={onToggleShare ? () => onToggleShare(post) : undefined} />
     </View>
   );

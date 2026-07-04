@@ -7,6 +7,7 @@ export type NotificationKind =
   | 'LIKE' | 'INSIGHT' | 'REPOST'
   | 'COMMENT' | 'REPLY' | 'SUBSCRIBED'
   | 'FOLLOW' | 'APPLICATION'
+  | 'JOIN_REQUEST' | 'JOIN_APPROVED' | 'GROUP_POST'
   | 'CONNECTION' | 'CONNECTION_ACCEPTED' | 'MESSAGE' | 'POST_APPROVED' | 'POST_REJECTED';
 
 export interface AppNotification {
@@ -15,6 +16,8 @@ export interface AppNotification {
   postId: string | null;
   commentId: string | null;
   opportunityId: string | null;
+  groupId: string | null;
+  groupName: string | null;
   preview: string | null;
   read: boolean;
   createdAt: string;
@@ -27,7 +30,7 @@ export interface AppNotification {
 interface RawNotification {
   id: string;
   type: NotificationKind;
-  payload: { postId?: string; commentId?: string; opportunityId?: string; preview?: string } | null;
+  payload: { postId?: string; commentId?: string; opportunityId?: string; groupId?: string; groupName?: string; preview?: string } | null;
   read_at: string | null;
   created_at: string;
   actor_id: string | null;
@@ -42,6 +45,8 @@ const toNotification = (r: RawNotification): AppNotification => ({
   postId: r.payload?.postId ?? null,
   commentId: r.payload?.commentId ?? null,
   opportunityId: r.payload?.opportunityId ?? null,
+  groupId: r.payload?.groupId ?? null,
+  groupName: r.payload?.groupName ?? null,
   preview: r.payload?.preview ?? null,
   read: !!r.read_at,
   createdAt: r.created_at,

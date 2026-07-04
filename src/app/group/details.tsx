@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Share, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '../../components/Avatar';
 import { BottomSheet, SheetHeader, SheetScrollView } from '../../components/BottomSheet';
 import { CountBadge } from '../../components/CountBadge';
@@ -59,6 +59,7 @@ export default function CommunityDetails() {
   const toast = useToast();
   const dialog = useDialog();
   const me = useAuth((s) => s.user);
+  const insets = useSafeAreaInsets();
   const { width: screenW } = useWindowDimensions();
   const { data: g, isLoading } = useGroup(id);
   const isAdmin = g?.myRole === 'ADMIN';
@@ -150,7 +151,7 @@ export default function CommunityDetails() {
           {isLoading ? <ActivityIndicator color={colors.brand[500]} /> : <EmptyState icon="groups" title="Comunidade não encontrada" />}
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
+        <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}>
           {/* identidade */}
           <View className="items-center gap-2 px-4 pt-6 pb-4">
             {g.coverPath ? (

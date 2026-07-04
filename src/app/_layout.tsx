@@ -37,7 +37,18 @@ function AuthGate() {
     const sub = Notifications.addNotificationResponseReceivedListener((r) => {
       openFromData(r.notification.request.content.data);
     });
-    return () => sub.remove();
+    // push RECEBIDO com o app aberto → refetch imediato dos caches sociais:
+    // badges (Mensagens/comunidades), sino e feeds refletem NA HORA, sem
+    // esperar o próximo polling (exigência de UX do dono — tempo real).
+    const recv = Notifications.addNotificationReceivedListener(() => {
+      for (const key of [
+        ['groups'], ['group'], ['group-posts'],          // comunidades (posts novos, aprovação de entrada)
+        ['notifications'], ['notifications-unread'],      // sino
+        ['opportunity-applications'], ['my-opportunities'], // candidaturas
+        ['user'],                                          // contadores do perfil (follow)
+      ]) void queryClient.invalidateQueries({ queryKey: key });
+    });
+    return () => { sub.remove(); recv.remove(); };
   }, [router]);
 
   useEffect(() => {

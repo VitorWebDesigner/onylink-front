@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View, type ViewToken } from 'react-native';
 import Animated, { Extrapolation, interpolate, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -13,6 +13,7 @@ import { useToast } from '../../components/feedback/toast';
 import { colors } from '../../theme/colors';
 import { HIT_SLOP, PRESSED_OPACITY } from '../../theme/tokens';
 import { handleOf } from '../../lib/format';
+import { api } from '../../lib/api';
 import { useAuth } from '../../store/auth';
 import { syncFeedLiveCounts, useFeed, useToggleInsight, useToggleLike, useToggleRepost, useToggleShare, useToggleTopCommentReaction } from '../../features/feed/hooks';
 import { useUnreadCount } from '../../features/notifications/hooks';
@@ -62,17 +63,35 @@ export default function Feed() {
 
   // Tap na logo (item 6): atualiza o feed e volta ao topo.
   const refreshFromLogo = useCallback(() => {
+    setHasNew(false);
     listRef.current?.scrollToOffset({ offset: 0, animated: true });
     void refetch();
   }, [refetch]);
 
-  // Reações de outros usuários sobem ao vivo enquanto o feed está em foco (item 2).
+  // Reações de outros usuários sobem ao vivo enquanto o feed está em foco (item 2);
+  // na mesma rodada checa se há POST NOVO de terceiros (id mais recente fora do
+  // cache → pill "Novas publicações"). Nunca refetch automático: a lista não pode
+  // reordenar sob o dedo do usuário — quem decide é o toque na pill.
+  const [hasNew, setHasNew] = useState(false);
   useFocusEffect(
     useCallback(() => {
-      const intv = setInterval(() => { void syncFeedLiveCounts(qc); }, LIVE_POLL_MS);
+      const tick = async () => {
+        await syncFeedLiveCounts(qc);
+        try {
+          const r = await api.get<{ id: string | null }>('/web/posts/latest');
+          const feedNow = qc.getQueryData<FeedPost[]>(['feed']);
+          if (r?.id && feedNow?.length && !feedNow.some((p) => p.id === r.id)) setHasNew(true);
+        } catch { /* polling silencioso */ }
+      };
+      const intv = setInterval(() => { void tick(); }, LIVE_POLL_MS);
       return () => clearInterval(intv);
     }, [qc]),
   );
+  const showNewPosts = useCallback(() => {
+    setHasNew(false);
+    listRef.current?.scrollToOffset({ offset: 0, animated: true });
+    void refetch();
+  }, [refetch]);
 
   // Prompt de compose (item 4): ListHeaderComponent → ROLA junto com o feed (só a top
   // bar fica fixa). MEMOIZADO → identidade estável: não remonta o header da FlatList a
@@ -139,7 +158,7 @@ export default function Feed() {
           scrollEventThrottle={16}
           viewabilityConfig={viewabilityConfig}
           onViewableItemsChanged={onViewableChanged}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.brand[500]} />}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { setHasNew(false); void refetch(); }} tintColor={colors.brand[500]} />}
           renderItem={({ item }) => (
             <PostCard
               post={item}
@@ -164,6 +183,23 @@ export default function Feed() {
           }
         />
       )}
+
+      {/* pill "Novas publicações" — post novo de terceiros detectado pelo polling */}
+      {hasNew ? (
+        <View pointerEvents="box-none" style={{ position: 'absolute', top: 108, left: 0, right: 0, alignItems: 'center' }}>
+          <Pressable
+            onPress={showNewPosts}
+            style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
+            className="flex-row items-center gap-1.5 rounded-pill bg-brand-500 px-4 py-2"
+          >
+            {/* chevron pra cima = back rotacionado (Iconly não tem chevron-up no Icon.tsx) */}
+            <View style={{ transform: [{ rotate: '90deg' }] }}>
+              <Icon name="back" set="light" size={14} color="#FFFFFF" />
+            </View>
+            <Text className="text-white text-[13px] font-semibold">Novas publicações</Text>
+          </Pressable>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }

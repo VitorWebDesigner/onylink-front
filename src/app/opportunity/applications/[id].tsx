@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Avatar } from '../../../components/Avatar';
@@ -79,7 +79,7 @@ export default function Applications() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { data: o } = useOpportunity(id);
-  const { data: apps, isLoading } = useApplications(id);
+  const { data: apps, isLoading, refetch, isRefetching } = useApplications(id);
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
@@ -96,6 +96,7 @@ export default function Applications() {
       <FlatList
         data={apps ?? []}
         keyExtractor={(a) => a.id}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} tintColor={colors.brand[500]} />}
         renderItem={({ item }) => <ApplicationItem app={item} oppId={id} />}
         ListEmptyComponent={
           isLoading ? null : (

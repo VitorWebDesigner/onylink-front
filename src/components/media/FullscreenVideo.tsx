@@ -13,7 +13,8 @@ import { absoluteMediaUrl, bunnyHeaders } from '../../lib/media';
 import { useSharedVideoPlayer, useVideoOwnership } from '../../lib/videoPlayers';
 import { compactNumber } from '../../lib/format';
 import { useMediaUi } from '../../store/mediaUi';
-import type { FeedPost, MediaItem } from '../../features/feed/types';
+import { useAuth } from '../../store/auth';
+import { canRepostPost, type FeedPost, type MediaItem } from '../../features/feed/types';
 
 const safeTime = (fn: () => number) => { try { return fn(); } catch { return 0; } };
 
@@ -70,6 +71,9 @@ export function FullscreenVideo({ item, post, r, insetTop, insetBottom, onReact,
   const [duration, setDuration] = useState(() => safeTime(() => player.duration ?? 0));
   const [holding, setHolding] = useState(false); // segurando p/ 2×
   const [followed, setFollowed] = useState(post.authorFollowed);
+  const me = useAuth((s) => s.user);
+  // post de comunidade não destacado: repostar só pro DONO da comunidade
+  const canRepost = canRepostPost(post, me?.id);
 
   const draggingRef = useRef(false);
   const holdingRef = useRef(false);
@@ -254,7 +258,9 @@ export function FullscreenVideo({ item, post, r, insetTop, insetBottom, onReact,
         <AnimatedReaction icon="heart" vertical active={r.liked} activeColor={colors.action.like} inactiveColor="#FFFFFF" count={r.likeCount} size={30} fontSize={13} onPress={() => onReact('like')} />
         {/* comentar/repostar/enviar sem cor (branco fixo sobre o vídeo) */}
         <AnimatedReaction icon="comment" vertical active={false} activeColor="#FFFFFF" inactiveColor="#FFFFFF" count={r.commentCount} size={30} fontSize={13} onPress={onComment} />
-        <AnimatedReaction icon="repost" vertical active={r.reposted} activeColor="#FFFFFF" inactiveColor="#FFFFFF" count={r.repostCount} size={30} fontSize={13} onPress={() => onReact('repost')} />
+        {canRepost ? (
+          <AnimatedReaction icon="repost" vertical active={r.reposted} activeColor="#FFFFFF" inactiveColor="#FFFFFF" count={r.repostCount} size={30} fontSize={13} onPress={() => onReact('repost')} />
+        ) : null}
         <AnimatedReaction icon="send" vertical active={r.shared} activeColor="#FFFFFF" inactiveColor="#FFFFFF" count={r.shareCount} size={30} fontSize={13} onPress={() => onReact('share')} />
       </View>
 

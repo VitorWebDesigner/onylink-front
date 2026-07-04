@@ -13,7 +13,8 @@ import { useReactionPicker } from '../reactions/ReactionPickerProvider';
 import { CommentsSheet } from '../comments/CommentsSheet';
 import { useRecordView } from '../../features/feed/hooks';
 import { absoluteMediaUrl, bunnyHeaders } from '../../lib/media';
-import type { FeedPost, MediaItem } from '../../features/feed/types';
+import { useAuth } from '../../store/auth';
+import { canRepostPost, type FeedPost, type MediaItem } from '../../features/feed/types';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -70,6 +71,9 @@ export function MediaViewerProvider({ children }: { children: ReactNode }) {
   const [index, setIndex] = useState(0);
   const [chrome, setChrome] = useState(true);
   const [r, setR] = useState<RState | null>(null);
+  const me = useAuth((s) => s.user);
+  // post de comunidade não destacado: repostar só pro DONO da comunidade
+  const canRepost = !opts || canRepostPost(opts.post, me?.id);
   const chromeAnim = useRef(new Animated.Value(1)).current;
   const dragY = useRef(new Animated.Value(0)).current;
   const lastTap = useRef(0);
@@ -233,7 +237,9 @@ export function MediaViewerProvider({ children }: { children: ReactNode }) {
                 <AnimatedReaction icon="insight" active={r.insighted} activeColor={colors.action.insight} inactiveColor="#FFFFFF" count={r.insightCount} size={24} fontSize={14} onPress={() => react('insight')} />
                 <AnimatedReaction icon="heart" active={r.liked} activeColor={colors.action.like} inactiveColor="#FFFFFF" count={r.likeCount} size={24} fontSize={14} onPress={() => react('like')} />
                 <AnimatedReaction icon="comment" active={false} activeColor="#FFFFFF" inactiveColor="#FFFFFF" count={r.commentCount} size={24} fontSize={14} onPress={() => { close(); opts?.onComment(); }} />
-                <AnimatedReaction icon="repost" active={r.reposted} activeColor="#FFFFFF" inactiveColor="#FFFFFF" count={r.repostCount} size={24} fontSize={14} onPress={() => react('repost')} />
+                {canRepost ? (
+                  <AnimatedReaction icon="repost" active={r.reposted} activeColor="#FFFFFF" inactiveColor="#FFFFFF" count={r.repostCount} size={24} fontSize={14} onPress={() => react('repost')} />
+                ) : null}
                 <AnimatedReaction icon="send" active={r.shared} activeColor="#FFFFFF" inactiveColor="#FFFFFF" count={r.shareCount} size={24} fontSize={14} onPress={() => react('share')} />
               </View>
             ) : null}

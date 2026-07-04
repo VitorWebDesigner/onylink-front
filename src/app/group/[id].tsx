@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { PostCard } from '../../components/PostCard';
 import { BottomSheet } from '../../components/BottomSheet';
 import { Button } from '../../components/Button';
@@ -17,7 +17,7 @@ import { useFeaturePost, useGroup, useGroupPosts, useToggleJoin } from '../../fe
 import { useToast } from '../../components/feedback/toast';
 import { useFollowFlow } from '../../components/follow/FollowFlowProvider';
 import { useAuth } from '../../store/auth';
-import { useToggleInsight, useToggleLike, useToggleRepost, useToggleShare, useToggleTopCommentReaction } from '../../features/feed/hooks';
+import { syncListLiveCounts, useToggleInsight, useToggleLike, useToggleRepost, useToggleShare, useToggleTopCommentReaction } from '../../features/feed/hooks';
 import type { FeedPost } from '../../features/feed/types';
 
 /**
@@ -44,6 +44,17 @@ export default function CommunityFeed() {
   const toggleTopComment = useToggleTopCommentReaction();
   const [adminTarget, setAdminTarget] = useState<FeedPost | null>(null);
   const qc = useQueryClient();
+  const insets = useSafeAreaInsets();
+
+  // reações de OUTROS sobem ao vivo no feed da comunidade (mesmo polling de 7s
+  // do feed geral) enquanto a tela está em foco
+  useFocusEffect(
+    useCallback(() => {
+      if (!isMember) return;
+      const intv = setInterval(() => { void syncListLiveCounts(qc, ['group-posts', id]); }, 7000);
+      return () => clearInterval(intv);
+    }, [isMember, id, qc]),
+  );
 
   // abrir o feed marca "visto" no back — zera a bolinha de não visto na hora,
   // sem esperar o próximo refetch/polling da lista
@@ -130,6 +141,12 @@ export default function CommunityFeed() {
         <FlatList
           data={posts ?? []}
           keyExtractor={(p) => p.id}
+          // Android com navegação por BOTÕES: sem isso a barra de reações do
+          // último post fica escondida sob a navbar (edge-to-edge, SDK 54)
+          contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+          // posts novos chegam pelo refetch de 15s — âncora impede a lista de
+          // pular sob o dedo quando itens entram no topo
+          maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
           renderItem={({ item }) => (
             <PostCard
               post={item}

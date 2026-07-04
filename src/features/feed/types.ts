@@ -58,6 +58,10 @@ export interface FeedPost {
   communityId?: string | null;
   communityName?: string | null;
   featuredByName?: string | null;
+  /** Dono da comunidade (created_by) — só ele reposta post NÃO destacado. */
+  communityOwnerId?: string | null;
+  /** Destacado no feed geral (público) — aí qualquer um pode repostar. */
+  featured?: boolean;
   createdAt: string;
   topComment?: TopComment | null;
 }
@@ -88,6 +92,7 @@ export interface RawFeedRow {
   group_id?: string | null;
   featured_at?: string | null;
   community_name?: string | null;
+  community_owner_id?: string | null;
   featured_by_name?: string | null;
   media?: MediaItem[];
   top_comment_id?: string | null;
@@ -102,6 +107,15 @@ export interface RawFeedRow {
   top_comment_insighted?: boolean | null;
   top_comment_reposted?: boolean | null;
   top_comment_shared?: boolean | null;
+}
+
+/**
+ * Repostar PUBLICA no perfil/feed geral. Post de comunidade NÃO destacado é
+ * conteúdo interno → só o DONO da comunidade pode repostar (decisão do dono;
+ * o back devolve 403 igual). Destacado no feed geral já é público → todos podem.
+ */
+export function canRepostPost(p: FeedPost, meId?: string | null): boolean {
+  return !p.communityId || !!p.featured || (!!meId && p.communityOwnerId === meId);
 }
 
 /** Normaliza a linha do backend (snake) para o modelo do app (camel). */
@@ -127,6 +141,8 @@ export function toFeedPost(r: RawFeedRow): FeedPost {
     pinned: Boolean(r.pinned),
     communityId: r.group_id ?? null,
     communityName: r.community_name ?? null,
+    communityOwnerId: r.community_owner_id ?? null,
+    featured: Boolean(r.featured_at),
     featuredByName: r.featured_at ? (r.featured_by_name ?? null) : null,
     authorFollowed: Boolean(r.author_followed),
     subscribed: Boolean(r.subscribed),

@@ -48,11 +48,16 @@ export function useGroup(idOrSlug: string) {
   });
 }
 
-/** Publicações da comunidade (SÓ membros — o back devolve 403 p/ não-membro). */
+/** Publicações da comunidade (SÓ membros — o back devolve 403 p/ não-membro).
+ *  TEMPO REAL: refetch 15s (posts novos de outros membros entram sozinhos —
+ *  cobre também Expo Go, que não recebe push); pausa durante mutação otimista.
+ *  A FlatList da tela usa maintainVisibleContentPosition → nada pula sob o dedo. */
 export function useGroupPosts(groupId: string, enabled = true) {
+  const qc = useQueryClient();
   return useQuery({
     queryKey: ['group-posts', groupId],
     enabled: !!groupId && enabled,
+    refetchInterval: () => (qc.isMutating() ? false : 15_000),
     retry: false, // 403 de não-membro não deve re-tentar
     queryFn: async (): Promise<FeedPost[]> => {
       if (config.mock.groups) return mockGroupPosts[groupId] ?? [];

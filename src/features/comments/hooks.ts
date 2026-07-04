@@ -2,8 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { config } from '../../lib/config';
 import { mockComments } from '../../lib/mock';
+import { patchPostCaches } from '../feed/hooks';
 import type { Comment } from './types';
-import type { FeedPost } from '../feed/types';
 
 const key = (postId: string) => ['comments', postId];
 
@@ -47,10 +47,14 @@ const toComment = (postId: string, r: RawCommentRow): Comment => ({
   shared: Boolean(r.shared),
 });
 
-/** Comentários de um post (chapado, com threading). Backend: GET /web/posts/:id/comments. */
+/** Comentários de um post (chapado, com threading). Backend: GET /web/posts/:id/comments.
+ *  TEMPO REAL: refetch a cada 10s (comentários de OUTROS aparecem sozinhos);
+ *  pausa enquanto há mutação otimista em voo. */
 export function useComments(postId: string) {
+  const qc = useQueryClient();
   return useQuery({
     queryKey: key(postId),
+    refetchInterval: () => (qc.isMutating() ? false : 10_000),
     queryFn: async (): Promise<Comment[]> => {
       if (config.mock.comments) return mockComments[postId] ?? [];
       const { items } = await api.get<{ items: RawCommentRow[] }>(`/web/posts/${postId}/comments`);
@@ -70,7 +74,6 @@ export function useAddComment(postId: string) {
     onMutate: async ({ content, parentId }) => {
       await qc.cancelQueries({ queryKey: key(postId) });
       const prev = qc.getQueryData<Comment[]>(key(postId));
-      const prevFeed = qc.getQueryData<FeedPost[]>(['feed']);
       const optimistic: Comment = {
         id: `local-${Date.now()}`,
         postId,
@@ -95,14 +98,13 @@ export function useAddComment(postId: string) {
         // resposta → soma reply_count do pai
         return parentId ? next.map((c) => (c.id === parentId ? { ...c, replyCount: c.replyCount + 1 } : c)) : next;
       });
-      qc.setQueryData<FeedPost[]>(['feed'], (old) =>
-        (old ?? []).map((p) => (p.id === postId ? { ...p, commentCount: p.commentCount + 1 } : p)),
-      );
-      return { prev, prevFeed };
+      // contador de comentários sobe em TODAS as listas + detalhe (não só no feed geral)
+      patchPostCaches(qc, postId, (p) => ({ ...p, commentCount: p.commentCount + 1 }));
+      return { prev };
     },
     onError: (_e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(key(postId), ctx.prev);
-      if (ctx?.prevFeed) qc.setQueryData(['feed'], ctx.prevFeed);
+      patchPostCaches(qc, postId, (p) => ({ ...p, commentCount: Math.max(0, p.commentCount - 1) }));
     },
     onSettled: () => {
       if (!config.mock.comments) qc.invalidateQueries({ queryKey: key(postId) });

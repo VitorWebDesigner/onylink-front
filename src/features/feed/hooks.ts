@@ -24,7 +24,7 @@ export function patchPostCaches(qc: QueryClient, postId: string, patch: (p: Feed
 }
 
 /** Idem, mas por AUTOR (pílula Seguir replicada em todos os posts dele). */
-function patchAuthorCaches(qc: QueryClient, authorId: string, patch: (p: FeedPost) => FeedPost) {
+export function patchAuthorCaches(qc: QueryClient, authorId: string, patch: (p: FeedPost) => FeedPost) {
   for (const key of POST_LIST_KEYS) {
     qc.setQueriesData<FeedPost[]>({ queryKey: key }, (old) =>
       old?.map((p) => (p.authorId === authorId ? patch(p) : p)),
@@ -60,22 +60,22 @@ interface RawLiveRow {
 
 /**
  * TEMPO REAL (item 2): busca os contadores atuais dos posts carregados e os
- * funde no cache do feed — assim curtidas/comentários/etc de OUTROS usuários
- * sobem na sua tela enquanto você rola. Só mexe nos CONTADORES (e no comentário
- * em destaque); preserva o SEU estado (liked/insighted/...). Pula a rodada se há
- * mutação otimista em voo, pra não brigar com o seu próprio toque. O AnimatedReaction
- * anima o número quando ele muda.
+ * funde no cache da LISTA (feed geral OU feed de comunidade) — assim curtidas/
+ * comentários/etc de OUTROS usuários sobem na sua tela enquanto você rola. Só
+ * mexe nos CONTADORES (e no comentário em destaque); preserva o SEU estado
+ * (liked/insighted/...). Pula a rodada se há mutação otimista em voo, pra não
+ * brigar com o seu próprio toque. O AnimatedReaction anima o número quando muda.
  */
-export async function syncFeedLiveCounts(qc: QueryClient): Promise<void> {
+export async function syncListLiveCounts(qc: QueryClient, key: readonly unknown[]): Promise<void> {
   if (config.mock.feed) return;
   if (qc.isMutating()) return;
-  const feed = qc.getQueryData<FeedPost[]>(['feed']);
+  const feed = qc.getQueryData<FeedPost[]>(key as unknown[]);
   if (!feed?.length) return;
   const ids = feed.map((p) => p.id).slice(0, 60).join(',');
   try {
     const rows = (await api.get<RawLiveRow[]>(`/web/posts/live?ids=${ids}`)) ?? [];
     const map = new Map(rows.map((r) => [r.id, r]));
-    qc.setQueryData<FeedPost[]>(['feed'], (old) =>
+    qc.setQueryData<FeedPost[]>(key as unknown[], (old) =>
       (old ?? []).map((p) => {
         const r = map.get(p.id);
         if (!r) return p;
@@ -110,6 +110,9 @@ export async function syncFeedLiveCounts(qc: QueryClient): Promise<void> {
     // silencioso: polling não deve gerar erro visível
   }
 }
+
+/** Atalho legado: live counts do feed geral. */
+export const syncFeedLiveCounts = (qc: QueryClient) => syncListLiveCounts(qc, ['feed']);
 
 /** Toggle de reação no comentário-destaque direto do feed (otimista no cache do feed). */
 export function useToggleTopCommentReaction() {
@@ -233,7 +236,10 @@ export function usePost(postId: string) {
   return useQuery({
     queryKey: ['post', postId],
     enabled: !!postId,
-    staleTime: 15_000,
+    staleTime: 8_000,
+    // tempo real no DETALHE: contadores/comentário-destaque de outros sobem
+    // sozinhos; pausa enquanto há mutação otimista em voo (não briga com o toque)
+    refetchInterval: () => (qc.isMutating() ? false : 10_000),
     retry: false, // 403 de comunidade não deve re-tentar
     queryFn: async (): Promise<FeedPost> => {
       if (config.mock.feed) {

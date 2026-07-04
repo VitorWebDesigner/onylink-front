@@ -1,6 +1,7 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { config } from '../../lib/config';
+import { patchAuthorCaches } from '../feed/hooks';
 
 export interface SuggestUser {
   id: string;
@@ -37,12 +38,26 @@ export function useFollowSuggestions(seedId: string | null, enabled: boolean) {
   });
 }
 
-/** Seguir/deixar de seguir direto (cards de sugestão — sem abrir o follow-flow). */
+/** Seguir/deixar de seguir direto (cards de sugestão, sheet de membro — sem
+ *  abrir o follow-flow). Replica o estado nas MESMAS superfícies do follow do
+ *  feed: pílula Seguir de todos os posts do usuário + tela de perfil aberta. */
 export function useFollowUser() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ userId, followed }: { userId: string; followed: boolean }) => {
       if (config.mock.feed) return;
       return followed ? api.delete(`/web/connections/follow/${userId}`) : api.post(`/web/connections/follow/${userId}`);
+    },
+    onMutate: ({ userId, followed }) => {
+      patchAuthorCaches(qc, userId, (p) => ({ ...p, authorFollowed: !followed }));
+      const prevUser = qc.getQueryData<{ id: string; followed: boolean; followersCount: number }>(['user', userId]);
+      if (prevUser) {
+        qc.setQueryData(['user', userId], { ...prevUser, followed: !followed, followersCount: prevUser.followersCount + (followed ? -1 : 1) });
+      }
+    },
+    onError: (_e, v) => {
+      void qc.invalidateQueries({ queryKey: ['user', v.userId] });
+      void qc.invalidateQueries({ queryKey: ['feed'] });
     },
   });
 }
