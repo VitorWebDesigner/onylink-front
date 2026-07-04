@@ -174,7 +174,15 @@ export function useModerateMembers(id: string) {
     mutationFn: (userId: string) => api.delete(`/web/groups/${id}/members/${userId}`),
     onSuccess: invalidate,
   });
-  return { approve, reject, remove };
+  const promote = useMutation({
+    mutationFn: (userId: string) => api.post(`/web/groups/${id}/members/${userId}/promote`),
+    onSuccess: invalidate,
+  });
+  const transfer = useMutation({
+    mutationFn: (userId: string) => api.post(`/web/groups/${id}/members/${userId}/transfer`),
+    onSuccess: invalidate,
+  });
+  return { approve, reject, remove, promote, transfer };
 }
 
 /** Reposta/remove post da comunidade NO FEED GERAL (admin). */

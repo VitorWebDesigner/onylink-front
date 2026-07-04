@@ -18,7 +18,11 @@ export interface Group {
   /** Papel do usuário na comunidade ('ADMIN' | 'MEMBER' | null). */
   myRole?: string | null;
   creatorName?: string | null;
+  /** id do DONO (created_by) — dono não sai sem transferir a propriedade. */
+  createdBy?: string | null;
   createdAt?: string | null;
+  /** Pedidos pendentes (>0 só para ADMIN — badge nas listas/telas). */
+  pendingRequests: number;
   /** Só no mock offline (ícone ilustrativo — Ionicon). */
   icon?: string;
 }
@@ -57,7 +61,9 @@ export interface RawGroupRow {
   pinned?: boolean;
   my_role?: string | null;
   creator_name?: string | null;
+  created_by?: string | null;
   created_at?: string;
+  pending_requests?: number;
 }
 
 export const toGroup = (r: RawGroupRow): Group => ({
@@ -76,5 +82,7 @@ export const toGroup = (r: RawGroupRow): Group => ({
   pinned: Boolean(r.pinned),
   myRole: r.my_role ?? null,
   creatorName: r.creator_name ?? null,
+  createdBy: r.created_by ?? null,
   createdAt: r.created_at ?? null,
+  pendingRequests: r.pending_requests ?? 0,
 });

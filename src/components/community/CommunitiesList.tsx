@@ -70,6 +70,12 @@ export function CommunitiesList() {
               <View className="flex-row items-center gap-1.5">
                 {item.pinned ? <Icon name="bookmark" set="bold" size={12} color={colors.ink[400]} /> : null}
                 <Text className="text-ink-900 font-semibold shrink" numberOfLines={1}>{item.name}</Text>
+                {/* solicitações pendentes (admin) — badge intuitivo já na lista */}
+                {item.pendingRequests > 0 ? (
+                  <View className="min-w-[20px] h-5 rounded-full bg-danger items-center justify-center px-1.5">
+                    <Text className="text-white text-[11px] font-bold">{item.pendingRequests > 99 ? '99+' : item.pendingRequests}</Text>
+                  </View>
+                ) : null}
               </View>
               <Text className="text-ink-500 text-[13px]" numberOfLines={1}>
                 {[item.segment, item.city].filter(Boolean).join(' · ')}{item.segment || item.city ? ' · ' : ''}{item.memberCount.toLocaleString('pt-BR')} membros{item.isPrivate ? ' · Privada' : ''}

@@ -63,6 +63,17 @@ export default function CommunityFeed() {
         ) : (
           <Text className="text-ink-900 font-semibold text-base flex-1">Comunidade</Text>
         )}
+        {/* solicitações pendentes (admin) — badge no sino leva direto aos dados */}
+        {group && group.pendingRequests > 0 ? (
+          <Pressable onPress={openDetails} hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
+            <View>
+              <Icon name="bell" set="light" size={24} color={colors.ink[900]} />
+              <View className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] rounded-full bg-danger items-center justify-center px-1">
+                <Text className="text-white text-[10px] font-bold">{group.pendingRequests > 99 ? '99+' : group.pendingRequests}</Text>
+              </View>
+            </View>
+          </Pressable>
+        ) : null}
         {isMember ? (
           <Pressable
             onPress={() => router.push({ pathname: '/compose', params: { groupId: group!.id, groupName: group!.name } })}

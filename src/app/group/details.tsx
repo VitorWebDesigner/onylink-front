@@ -1,35 +1,32 @@
-import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, Share, Text, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '../../components/Avatar';
+import { BottomSheet, SheetScrollView } from '../../components/BottomSheet';
 import { EmptyState } from '../../components/EmptyState';
 import { Icon, type IconName } from '../../components/Icon';
 import { MembersSheet } from '../../components/community/MembersSheet';
+import { useDialog } from '../../components/feedback/dialog';
 import { useToast } from '../../components/feedback/toast';
 import { colors } from '../../theme/colors';
 import { HIT_SLOP, PRESSED_OPACITY } from '../../theme/tokens';
 import { useAuth } from '../../store/auth';
-import { useGroup, useGroupMembers, useJoinRequests, useModerateMembers, useTogglePinGroup, useToggleJoin } from '../../features/groups/hooks';
+import { useGroup, useGroupMembers, useGroupPosts, useJoinRequests, useModerateMembers, useTogglePinGroup, useToggleJoin } from '../../features/groups/hooks';
 
 const MONTHS = ['jan.', 'fev.', 'mar.', 'abr.', 'mai.', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.'];
 
-/** Botão quadrado da fileira de ações (estilo WhatsApp, adaptado ao design). */
-function ActionSquare({ icon, label, active, onPress }: { icon: IconName; label: string; active?: boolean; onPress: () => void }) {
-  return (
-    <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })} className="flex-1 items-center gap-1.5 py-3 rounded-2xl bg-surface-muted border border-surface-border">
-      <Icon name={icon} set={active ? 'bold' : 'light'} size={22} color={colors.brand[500]} />
-      <Text className="text-ink-700 text-xs font-semibold">{label}</Text>
-    </Pressable>
-  );
-}
-
-function Row({ icon, label, badge, danger, onPress }: { icon: IconName; label: string; badge?: number; danger?: boolean; onPress: () => void }) {
+function Row({ icon, label, sub, badge, danger, onPress }: {
+  icon: IconName; label: string; sub?: string; badge?: number; danger?: boolean; onPress: () => void;
+}) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })} className="flex-row items-center gap-3 px-4 py-4 border-b border-surface-border">
       <Icon name={icon} set="light" size={22} color={danger ? colors.danger : colors.ink[900]} />
-      <Text className={['flex-1 font-semibold text-[15px]', danger ? 'text-danger' : 'text-ink-900'].join(' ')}>{label}</Text>
+      <View className="flex-1">
+        <Text className={['font-semibold text-[15px]', danger ? 'text-danger' : 'text-ink-900'].join(' ')}>{label}</Text>
+        {sub ? <Text className="text-ink-500 text-[13px]">{sub}</Text> : null}
+      </View>
       {badge ? (
         <View className="min-w-[22px] h-[22px] rounded-full bg-danger items-center justify-center px-1.5">
           <Text className="text-white text-xs font-bold">{badge > 99 ? '99+' : badge}</Text>
@@ -41,37 +38,102 @@ function Row({ icon, label, badge, danger, onPress }: { icon: IconName; label: s
 }
 
 /**
- * DADOS DA COMUNIDADE (estilo WhatsApp — plano-grupos-comunidades.md): foto grande,
- * nome, membros, descrição, fileira de ações, SOLICITAÇÕES com badge (admin),
- * membros inline + mostrar todos, sair/denunciar, "criada por" no rodapé.
- * Mesmo padrão vale para grupos de chat e 1:1 na Fase B.
+ * DADOS DA COMUNIDADE (estilo WhatsApp). Ações rápidas = ÍCONES no header
+ * (publicar/fixar/editar). Corpo: solicitações c/ badge, mídia da comunidade,
+ * compartilhar, membros inline (promover/transferir/remover), sair com
+ * CONFIRMAÇÃO (dono não sai sem transferir a propriedade — o back barra).
  */
 export default function CommunityDetails() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const toast = useToast();
+  const dialog = useDialog();
   const me = useAuth((s) => s.user);
+  const { width: screenW } = useWindowDimensions();
   const { data: g, isLoading } = useGroup(id);
   const isAdmin = g?.myRole === 'ADMIN';
+  const isOwner = !!g?.createdBy && g.createdBy === me?.id;
   const { data: members } = useGroupMembers(id, !!g?.joined);
   const { data: requests } = useJoinRequests(id, !!isAdmin && !!g?.isPrivate);
-  const { remove } = useModerateMembers(id);
+  const { remove, promote, transfer } = useModerateMembers(id);
+  const { data: posts } = useGroupPosts(id, !!g?.joined);
   const togglePin = useTogglePinGroup();
   const toggleJoin = useToggleJoin();
   const [membersOpen, setMembersOpen] = useState(false);
   const [membersTab, setMembersTab] = useState<'members' | 'requests'>('members');
+  const [mediaOpen, setMediaOpen] = useState(false);
 
   const openMembers = (tab: 'members' | 'requests') => { setMembersTab(tab); setMembersOpen(true); };
+
+  // mídias dos posts da comunidade (client-side — mesma fonte do feed dela)
+  const mediaItems = useMemo(
+    () => (posts ?? []).flatMap((p) => p.media.map((m, i) => ({ key: `${p.id}-${i}`, postId: p.id, type: m.type, uri: m.type === 'VIDEO' ? m.thumbnail : m.url }))),
+    [posts],
+  );
+  const cell = Math.floor((screenW - 4) / 3);
+
+  async function onLeave() {
+    if (!g) return;
+    if (isOwner) {
+      toast.error('Você é o dono. Transfira a propriedade para outro admin antes de sair.');
+      return;
+    }
+    const ok = await dialog.confirm({
+      title: 'Sair da comunidade?',
+      message: `Você deixará de ver e publicar em ${g.name}.`,
+      confirmText: 'Sair',
+      cancelText: 'Cancelar',
+      destructive: true,
+    });
+    if (ok) toggleJoin.mutate(
+      { id: g.id, joined: true, isPrivate: g.isPrivate, requested: false },
+      { onSuccess: () => router.back(), onError: (e) => toast.error(e instanceof Error ? e.message : 'Não foi possível sair.') },
+    );
+  }
+
+  async function onTransfer(targetId: string, targetName: string) {
+    const ok = await dialog.confirm({
+      title: 'Transferir propriedade?',
+      message: `${targetName} vira o dono da comunidade. Você continua como admin e poderá sair depois.`,
+      confirmText: 'Transferir',
+      cancelText: 'Cancelar',
+      destructive: true,
+    });
+    if (ok) transfer.mutate(targetId, {
+      onSuccess: () => toast.success('Propriedade transferida.'),
+      onError: (e) => toast.error(e instanceof Error ? e.message : 'Não foi possível transferir.'),
+    });
+  }
 
   const createdAt = g?.createdAt ? new Date(g.createdAt) : null;
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
+      {/* header: voltar · título · AÇÕES RÁPIDAS (publicar/fixar/editar) */}
       <View className="flex-row items-center gap-3 px-4 py-3 border-b border-surface-border">
         <Pressable onPress={() => router.back()} hitSlop={HIT_SLOP}>
           <Icon name="back" size={24} color={colors.ink[900]} />
         </Pressable>
         <Text className="text-ink-900 font-semibold text-base flex-1" numberOfLines={1}>Dados da comunidade</Text>
+        {g?.joined ? (
+          <Pressable onPress={() => router.push({ pathname: '/compose', params: { groupId: g.id, groupName: g.name } })} hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
+            <Icon name="paper" set="light" size={22} color={colors.ink[900]} />
+          </Pressable>
+        ) : null}
+        {g?.joined ? (
+          <Pressable
+            onPress={() => togglePin.mutate({ id: g.id, pinned: g.pinned }, { onError: (e) => toast.error(e instanceof Error ? e.message : 'Não foi possível fixar.') })}
+            hitSlop={HIT_SLOP}
+            style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
+          >
+            <Icon name="bookmark" set={g.pinned ? 'bold' : 'light'} size={22} color={g.pinned ? colors.brand[500] : colors.ink[900]} />
+          </Pressable>
+        ) : null}
+        {isAdmin ? (
+          <Pressable onPress={() => router.push({ pathname: '/group/edit', params: { id: g!.id } })} hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
+            <Icon name="edit" set="light" size={22} color={colors.ink[900]} />
+          </Pressable>
+        ) : null}
       </View>
 
       {isLoading || !g ? (
@@ -81,7 +143,7 @@ export default function CommunityDetails() {
       ) : (
         <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
           {/* identidade */}
-          <View className="items-center gap-2 px-4 pt-6 pb-4">
+          <View className="items-center gap-2 px-4 pt-6 pb-5">
             {g.coverPath ? (
               <Image source={{ uri: g.coverPath }} style={{ width: 96, height: 96, borderRadius: 48 }} contentFit="cover" />
             ) : (
@@ -104,58 +166,58 @@ export default function CommunityDetails() {
             ) : null}
           </View>
 
-          {/* fileira de ações */}
-          <View className="flex-row gap-3 px-4 pb-5">
-            {g.joined ? (
-              <ActionSquare icon="paper" label="Publicar" onPress={() => router.push({ pathname: '/compose', params: { groupId: g.id, groupName: g.name } })} />
-            ) : null}
-            <ActionSquare icon="groups" label="Membros" onPress={() => openMembers('members')} />
-            {g.joined ? (
-              <ActionSquare
-                icon="bookmark"
-                label={g.pinned ? 'Fixada' : 'Fixar'}
-                active={g.pinned}
-                onPress={() => togglePin.mutate({ id: g.id, pinned: g.pinned }, { onError: (e) => toast.error(e instanceof Error ? e.message : 'Não foi possível fixar.') })}
-              />
-            ) : null}
-            {isAdmin ? (
-              <ActionSquare icon="edit" label="Editar" onPress={() => router.push({ pathname: '/group/edit', params: { id: g.id } })} />
-            ) : null}
-          </View>
-
           {/* solicitações (ADMIN, privada) — badge bem visível */}
           {isAdmin && g.isPrivate ? (
-            <Row icon="bell" label="Solicitações de entrada" badge={requests?.length ?? 0} onPress={() => openMembers('requests')} />
+            <Row icon="bell" label="Solicitações de entrada" sub="Aprove ou recuse quem pediu para entrar" badge={requests?.length ?? g.pendingRequests} onPress={() => openMembers('requests')} />
           ) : null}
 
-          {/* membros inline (primeiros 8) + mostrar todos */}
+          {/* conteúdo e alcance */}
+          {g.joined ? (
+            <Row icon="image" label="Mídia da comunidade" sub={`${mediaItems.length} arquivo${mediaItems.length === 1 ? '' : 's'} nas publicações`} onPress={() => setMediaOpen(true)} />
+          ) : null}
+          <Row
+            icon="send"
+            label="Convidar pessoas"
+            sub="Compartilhe a comunidade fora do OnyLink"
+            onPress={() => void Share.share({ message: `Participe da comunidade "${g.name}" no OnyLink — ${g.description ?? 'networking de negócios de verdade.'}` })}
+          />
+
+          {/* membros inline (primeiros 8) — dono promove/transfere; admin remove */}
           {g.joined ? (
             <View className="pt-2">
               <Text className="text-ink-500 text-sm font-semibold px-4 pt-3 pb-1">{g.memberCount.toLocaleString('pt-BR')} membros</Text>
-              {(members ?? []).slice(0, 8).map((m) => (
-                <Pressable
-                  key={m.id}
-                  onPress={() => router.push({ pathname: '/user/[id]', params: { id: m.id } })}
-                  style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
-                  className="flex-row items-center gap-3 px-4 py-3 border-b border-surface-border"
-                >
-                  <Avatar name={m.name} uri={m.avatarPath} size="md" />
-                  <View className="flex-1">
-                    <View className="flex-row items-center gap-2">
-                      <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{m.id === me?.id ? 'Você' : m.name}</Text>
-                      {m.role === 'ADMIN' ? (
-                        <View className="rounded-pill px-2 py-0.5 bg-accent-50">
-                          <Text className="text-brand-500 text-[10px] font-bold">ADMIN</Text>
-                        </View>
-                      ) : null}
+              {(members ?? []).slice(0, 8).map((m) => {
+                const self = m.id === me?.id;
+                return (
+                  <Pressable
+                    key={m.id}
+                    onPress={() => router.push({ pathname: '/user/[id]', params: { id: m.id } })}
+                    style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
+                    className="flex-row items-center gap-3 px-4 py-3 border-b border-surface-border"
+                  >
+                    <Avatar name={m.name} uri={m.avatarPath} size="md" />
+                    <View className="flex-1">
+                      <View className="flex-row items-center gap-2">
+                        <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{self ? 'Você' : m.name}</Text>
+                        {m.role === 'ADMIN' ? (
+                          <View className="rounded-pill px-2 py-0.5 bg-accent-50">
+                            <Text className="text-brand-500 text-[10px] font-bold">{g.createdBy === m.id ? 'DONO' : 'ADMIN'}</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      <Text className="text-ink-400 text-[13px]" numberOfLines={1}>@{m.handle}{m.roleTitle ? ` · ${m.roleTitle}` : ''}</Text>
                     </View>
-                    <Text className="text-ink-400 text-[13px]" numberOfLines={1}>@{m.handle}{m.roleTitle ? ` · ${m.roleTitle}` : ''}</Text>
-                  </View>
-                  {isAdmin && m.role !== 'ADMIN' && m.id !== me?.id ? (
-                    <Text className="text-danger text-xs font-bold" suppressHighlighting onPress={() => remove.mutate(m.id)}>Remover</Text>
-                  ) : null}
-                </Pressable>
-              ))}
+                    {!self && isAdmin && m.role !== 'ADMIN' ? (
+                      <View className="flex-row gap-3">
+                        <Text className="text-brand-500 text-xs font-bold" suppressHighlighting onPress={() => promote.mutate(m.id, { onSuccess: () => toast.success(`${m.name} agora é admin.`) })}>Promover</Text>
+                        <Text className="text-danger text-xs font-bold" suppressHighlighting onPress={() => remove.mutate(m.id)}>Remover</Text>
+                      </View>
+                    ) : !self && isOwner && m.role === 'ADMIN' ? (
+                      <Text className="text-brand-500 text-xs font-bold" suppressHighlighting onPress={() => void onTransfer(m.id, m.name)}>Transferir</Text>
+                    ) : null}
+                  </Pressable>
+                );
+              })}
               {(members?.length ?? 0) > 8 ? (
                 <Pressable onPress={() => openMembers('members')} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })} className="px-4 py-3 border-b border-surface-border">
                   <Text className="text-brand-500 font-semibold text-sm">Mostrar todos os membros</Text>
@@ -167,7 +229,13 @@ export default function CommunityDetails() {
           {/* zona de saída */}
           <View className="pt-4">
             {g.joined ? (
-              <Row icon="logout" label="Sair da comunidade" danger onPress={() => toggleJoin.mutate({ id: g.id, joined: true, isPrivate: g.isPrivate, requested: false }, { onSuccess: () => router.back() })} />
+              <Row
+                icon="logout"
+                label="Sair da comunidade"
+                sub={isOwner ? 'Você é o dono — transfira a propriedade primeiro' : undefined}
+                danger
+                onPress={() => void onLeave()}
+              />
             ) : g.requested ? (
               <Row icon="close" label="Cancelar solicitação" danger onPress={() => toggleJoin.mutate({ id: g.id, joined: false, isPrivate: g.isPrivate, requested: true })} />
             ) : (
@@ -189,6 +257,37 @@ export default function CommunityDetails() {
       {g ? (
         <MembersSheet groupId={g.id} isAdmin={!!isAdmin} isPrivate={g.isPrivate} visible={membersOpen} onClose={() => setMembersOpen(false)} initialTab={membersTab} />
       ) : null}
+
+      {/* mídia da comunidade — grade das mídias dos posts */}
+      <BottomSheet visible={mediaOpen} onClose={() => setMediaOpen(false)} fullHeight>
+        <View className="flex-1">
+          <Text className="text-ink-900 text-lg font-extrabold text-center pb-3">Mídia da comunidade</Text>
+          {mediaItems.length ? (
+            <SheetScrollView className="flex-1">
+              <View className="flex-row flex-wrap">
+                {mediaItems.map((m, i) => (
+                  <Pressable
+                    key={m.key}
+                    onPress={() => { setMediaOpen(false); router.push({ pathname: '/post/[id]', params: { id: m.postId } }); }}
+                    style={({ pressed }) => ({ width: cell, height: cell, marginLeft: i % 3 === 0 ? 0 : 2, marginBottom: 2, opacity: pressed ? 0.92 : 1 })}
+                  >
+                    <Image source={{ uri: m.uri }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                    {m.type === 'VIDEO' ? (
+                      <View style={{ position: 'absolute', top: 6, right: 6 }}>
+                        <Icon name="play" size={14} color="#FFFFFF" />
+                      </View>
+                    ) : null}
+                  </Pressable>
+                ))}
+              </View>
+            </SheetScrollView>
+          ) : (
+            <View className="flex-1 items-center justify-center px-6">
+              <Text className="text-ink-500 text-center">Nenhuma mídia nas publicações ainda.</Text>
+            </View>
+          )}
+        </View>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
