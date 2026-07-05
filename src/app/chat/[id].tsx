@@ -54,7 +54,9 @@ export default function ChatScreen() {
 
   function send() {
     const v = text.trim();
-    if (!v || sendMessage.isPending) return;
+    if (!v) return;
+    // NÃO trava envios em sequência: cada mensagem vira bolha otimista na hora
+    // (padrão messenger — mandou > apareceu; o POST corre em paralelo)
     sendMessage.mutate(v);
     setText('');
   }

@@ -5,6 +5,7 @@ export { Input } from './Input';
 export { Screen } from './Screen';
 export { TextLink } from './TextLink';
 export { Logo } from './Logo';
+export { Checkbox } from './Checkbox';
 export { Chip } from './Chip';
 export { CountBadge } from './CountBadge';
 export { SocialButton } from './SocialButton';

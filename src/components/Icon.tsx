@@ -19,7 +19,7 @@ export type IconName =
   | 'bag' | 'wallet' | 'chart' | 'calendar'
   | 'sticker' | 'expand' | 'reply' | 'close' | 'video'
   | 'volumeOn' | 'volumeOff' | 'play' | 'pause' | 'eye' | 'trash'
-  | 'link' | 'whatsapp' | 'globe' | 'lock';
+  | 'link' | 'whatsapp' | 'globe' | 'lock' | 'check';
 
 export type IconSet = 'bold' | 'light' | 'bulk' | 'broken' | 'two-tone' | 'curved';
 
@@ -40,6 +40,7 @@ const IONICON: Partial<Record<IconName, keyof typeof Ionicons.glyphMap>> = {
   link: 'link-outline',
   whatsapp: 'logo-whatsapp',
   globe: 'globe-outline',
+  check: 'checkmark',
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -46,6 +46,7 @@ function AuthGate() {
         ['notifications'], ['notifications-unread'],      // sino
         ['opportunity-applications'], ['my-opportunities'], // candidaturas
         ['user'],                                          // contadores do perfil (follow)
+        ['conversations'], ['chat-messages'],              // chat: msg chega JUNTO do push
       ]) void queryClient.invalidateQueries({ queryKey: key });
     });
     return () => { sub.remove(); recv.remove(); };

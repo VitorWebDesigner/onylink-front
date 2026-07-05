@@ -1,9 +1,12 @@
+import { useEffect } from 'react';
 import { View } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 import { CountBadge } from '../../components/CountBadge';
 import { Icon } from '../../components/Icon';
 import { colors } from '../../theme/colors';
 import { useMessagesBadges } from '../../features/messages/hooks';
+import { useUnreadCount } from '../../features/notifications/hooks';
 
 /** Botão central "+" — só o ícone (sem caixa), na cor de destaque. */
 function PlusButton() {
@@ -27,6 +30,16 @@ function MessagesTabIcon({ color, focused }: { color: string; focused: boolean }
 
 export default function TabsLayout() {
   const router = useRouter();
+
+  // BADGE NO ÍCONE DO APP (iOS nativamente; Android conforme o launcher):
+  // total = mensagens não lidas (3 abas) + sino. Atualiza sempre que muda
+  // com o app aberto; o push do back manda o mesmo número pro app fechado.
+  const { total } = useMessagesBadges();
+  const { data: unreadSino } = useUnreadCount();
+  useEffect(() => {
+    void Notifications.setBadgeCountAsync((total ?? 0) + (unreadSino ?? 0)).catch(() => undefined);
+  }, [total, unreadSino]);
+
   return (
     <Tabs
       screenOptions={{

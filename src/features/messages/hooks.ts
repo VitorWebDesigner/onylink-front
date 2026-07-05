@@ -33,7 +33,7 @@ export function useConversations() {
     queryKey: ['conversations'],
     enabled: authed && !config.mock.groups,
     staleTime: 0,
-    refetchInterval: () => (qc.isMutating() ? false : 10_000),
+    refetchInterval: () => (qc.isMutating() ? false : 6_000),
     queryFn: async (): Promise<Conversation[]> => {
       const rows = await api.get<RawConversationRow[]>('/web/messages?limit=50');
       return (rows ?? []).map(toConversation);
@@ -57,15 +57,16 @@ export function useConversation(id: string) {
   });
 }
 
-/** Mensagens da conversa aberta — TEMPO REAL v1 = polling curto (4s, decisão do
- *  plano §3.2). Abrir/poll marca lida no back. Guarda otimista via isMutating. */
+/** Mensagens da conversa aberta — TEMPO REAL v1 = polling CURTO (2,5s) +
+ *  push em foreground invalida na hora (_layout). Abrir/poll marca lida no
+ *  back. Guarda otimista via isMutating. */
 export function useMessages(id: string) {
   const qc = useQueryClient();
   return useQuery({
     queryKey: ['chat-messages', id],
     enabled: !!id && !config.mock.groups,
     staleTime: 0,
-    refetchInterval: () => (qc.isMutating() ? false : 4_000),
+    refetchInterval: () => (qc.isMutating() ? false : 2_500),
     queryFn: async (): Promise<{ items: ChatMessage[]; othersReadAt: string | null }> => {
       const r = await api.get<{ items: RawMessageRow[]; othersReadAt: string | null }>(`/web/messages/${id}/messages?limit=60`);
       // zera o badge desta conversa na lista (o back já marcou lida)
@@ -82,6 +83,7 @@ export function useSendMessage(id: string) {
   const qc = useQueryClient();
   const me = useAuth((s) => s.user);
   return useMutation({
+    mutationKey: ['send-message', id],
     mutationFn: (content: string) => api.post(`/web/messages/${id}/messages`, { content }),
     onMutate: async (content) => {
       await qc.cancelQueries({ queryKey: ['chat-messages', id] });
@@ -105,8 +107,12 @@ export function useSendMessage(id: string) {
       );
     },
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: ['chat-messages', id] });
-      void qc.invalidateQueries({ queryKey: ['conversations'] });
+      // envios em SEQUÊNCIA: só re-busca quando o último resolve (senão o
+      // refetch intermediário derruba a bolha pendente da mensagem seguinte)
+      if (qc.isMutating({ mutationKey: ['send-message', id] }) <= 1) {
+        void qc.invalidateQueries({ queryKey: ['chat-messages', id] });
+        void qc.invalidateQueries({ queryKey: ['conversations'] });
+      }
     },
   });
 }

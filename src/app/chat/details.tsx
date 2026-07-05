@@ -6,6 +6,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Avatar } from '../../components/Avatar';
 import { BottomSheet, SheetHeader, SheetScrollView } from '../../components/BottomSheet';
 import { Button } from '../../components/Button';
+import { Checkbox } from '../../components/Checkbox';
 import { EmptyState } from '../../components/EmptyState';
 import { Icon, type IconName } from '../../components/Icon';
 import { MemberActionsSheet } from '../../components/community/MemberActionsSheet';
@@ -282,6 +283,22 @@ export default function ChatDetails() {
               className="h-11 rounded-input px-4 bg-surface-muted text-ink-900 border border-surface-border"
             />
           </View>
+          {/* selecionados — fileira de avatares com × (mesmo padrão do criar grupo) */}
+          {selected.length ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="always" contentContainerStyle={{ gap: 14, paddingHorizontal: 16, paddingBottom: 8 }}>
+              {selected.map((u) => (
+                <View key={u.id} className="items-center" style={{ width: 56 }}>
+                  <View>
+                    <Avatar name={u.name} uri={u.avatarPath} size="lg" />
+                    <Pressable onPress={() => setSelected((s) => s.filter((x) => x.id !== u.id))} hitSlop={8} className="absolute -right-1.5 -top-1.5 w-5 h-5 rounded-full bg-brand-500 border-2 border-surface items-center justify-center">
+                      <Icon name="close" size={10} color="#FFFFFF" />
+                    </Pressable>
+                  </View>
+                  <Text numberOfLines={1} className="text-ink-700 text-[11px] mt-1">{u.name.split(' ')[0]}</Text>
+                </View>
+              ))}
+            </ScrollView>
+          ) : null}
           <SheetScrollView className="flex-1" keyboardShouldPersistTaps="handled">
             {!candidates.length ? (
               <Text className="text-ink-500 text-sm text-center py-8">
@@ -297,9 +314,7 @@ export default function ChatDetails() {
                     <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{u.name}</Text>
                     <Text className="text-ink-400 text-[13px]" numberOfLines={1}>@{u.handle}</Text>
                   </View>
-                  <View className={['w-6 h-6 rounded-full border items-center justify-center', on ? 'bg-accent-500 border-accent-500' : 'border-surface-border'].join(' ')}>
-                    {on ? <Icon name="success" set="bold" size={14} color={colors.brand[500]} /> : null}
-                  </View>
+                  <Checkbox checked={on} />
                 </Pressable>
               );
             })}

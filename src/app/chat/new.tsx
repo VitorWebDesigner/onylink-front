@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
+import { Checkbox } from '../../components/Checkbox';
 import { Icon } from '../../components/Icon';
 import { Input } from '../../components/Input';
 import { TextLink } from '../../components/TextLink';
@@ -93,14 +94,20 @@ export default function NewChatGroup() {
           {/* foto + nome */}
           <View className="flex-row items-center gap-4">
             <Pressable onPress={() => void pickPhoto()} disabled={uploading} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
-              <View className="w-16 h-16 rounded-full bg-surface-muted border border-surface-border items-center justify-center overflow-hidden">
-                {photoPath ? (
-                  <Image source={{ uri: photoPath }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-                ) : uploading ? (
-                  <ActivityIndicator color={colors.brand[500]} />
-                ) : (
-                  <Icon name="camera" set="light" size={24} color={colors.ink[500]} />
-                )}
+              <View>
+                <View className="w-16 h-16 rounded-full bg-surface-muted border border-surface-border items-center justify-center overflow-hidden">
+                  {photoPath ? (
+                    <Image source={{ uri: photoPath }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                  ) : uploading ? (
+                    <ActivityIndicator color={colors.brand[500]} />
+                  ) : (
+                    <Icon name="groups" set="light" size={26} color={colors.ink[400]} />
+                  )}
+                </View>
+                {/* badge de câmera — mesmo padrão do avatar na edição de perfil */}
+                <View className="absolute -right-1 -bottom-1 w-7 h-7 rounded-full bg-brand-500 border-2 border-surface items-center justify-center">
+                  <Icon name="camera" set="light" size={13} color="#FFFFFF" />
+                </View>
               </View>
             </Pressable>
             <View className="flex-1">
@@ -108,16 +115,21 @@ export default function NewChatGroup() {
             </View>
           </View>
 
-          {/* selecionados */}
+          {/* selecionados — fileira de AVATARES com × no canto (estilo WhatsApp) */}
           {selected.length ? (
-            <View className="flex-row flex-wrap gap-2">
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="always" contentContainerStyle={{ gap: 14, paddingVertical: 2 }}>
               {selected.map((u) => (
-                <Pressable key={u.id} onPress={() => toggle(u)} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })} className="flex-row items-center gap-1.5 rounded-pill bg-accent-50 px-3 py-1.5">
-                  <Text className="text-brand-500 text-[13px] font-semibold">{u.name}</Text>
-                  <Icon name="close" size={13} color={colors.brand[500]} />
-                </Pressable>
+                <View key={u.id} className="items-center" style={{ width: 56 }}>
+                  <View>
+                    <Avatar name={u.name} uri={u.avatarPath} size="lg" />
+                    <Pressable onPress={() => toggle(u)} hitSlop={8} className="absolute -right-1.5 -top-1.5 w-5 h-5 rounded-full bg-brand-500 border-2 border-surface items-center justify-center">
+                      <Icon name="close" size={10} color="#FFFFFF" />
+                    </Pressable>
+                  </View>
+                  <Text numberOfLines={1} className="text-ink-700 text-[11px] mt-1">{u.name.split(' ')[0]}</Text>
+                </View>
               ))}
-            </View>
+            </ScrollView>
           ) : null}
 
           {/* participantes: SÓ contatos (sigo/me seguem); lista sempre visível */}
@@ -147,9 +159,7 @@ export default function NewChatGroup() {
                   <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{u.name}</Text>
                   <Text className="text-ink-400 text-[13px]" numberOfLines={1}>@{u.handle}{u.roleTitle ? ` · ${u.roleTitle}` : ''}</Text>
                 </View>
-                <View className={['w-6 h-6 rounded-full border items-center justify-center', on ? 'bg-accent-500 border-accent-500' : 'border-surface-border'].join(' ')}>
-                  {on ? <Icon name="success" set="bold" size={14} color={colors.brand[500]} /> : null}
-                </View>
+                <Checkbox checked={on} />
               </Pressable>
             );
           })}
