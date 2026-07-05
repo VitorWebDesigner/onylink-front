@@ -3,7 +3,7 @@ import { Tabs, useRouter } from 'expo-router';
 import { CountBadge } from '../../components/CountBadge';
 import { Icon } from '../../components/Icon';
 import { colors } from '../../theme/colors';
-import { useMessagesBadges } from '../../features/groups/hooks';
+import { useMessagesBadges } from '../../features/messages/hooks';
 
 /** Botão central "+" — só o ícone (sem caixa), na cor de destaque. */
 function PlusButton() {

@@ -31,7 +31,7 @@ export function bunnyHeaders(uri: string): Record<string, string> | undefined {
 
 /** Tipo de imagem = pasta de destino (bate com a taxonomia do backend). */
 export type ImageKind =
-  | 'avatar' | 'cover' | 'companyLogo' | 'communityCover'
+  | 'avatar' | 'cover' | 'companyLogo' | 'communityCover' | 'chatGroupPhoto'
   | 'postImage' | 'commentImage' | 'opportunityImage' | 'storyImage' | 'messageImage';
 
 /** Abre a galeria (seleção múltipla) e devolve as URIs locais escolhidas. */

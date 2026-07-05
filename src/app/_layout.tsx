@@ -74,6 +74,9 @@ function AuthGate() {
       <Stack.Screen name="group/new" options={{ presentation: 'modal' }} />
       <Stack.Screen name="group/edit" />
       <Stack.Screen name="group/details" />
+      <Stack.Screen name="chat/[id]" />
+      <Stack.Screen name="chat/new" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="chat/details" />
       <Stack.Screen name="opportunity/[id]" />
       <Stack.Screen name="opportunity/apply/[id]" options={{ presentation: 'modal' }} />
       <Stack.Screen name="opportunity/applications/[id]" />

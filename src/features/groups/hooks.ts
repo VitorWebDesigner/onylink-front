@@ -21,18 +21,8 @@ export function useGroups(opts?: { mine?: boolean; poll?: boolean }) {
   });
 }
 
-/**
- * Badges da tela Mensagens (e do ícone na tab bar): soma o NÃO VISTO/NÃO
- * RESOLVIDO por aba. Comunidades = posts não vistos + pedidos de entrada
- * pendentes (das minhas). Conversas e Grupos = Fase B (0 por ora).
- */
-export function useMessagesBadges() {
-  const { data: mine } = useGroups({ mine: true, poll: true });
-  const communities = (mine ?? []).reduce((acc, g) => acc + (g.unreadPosts ?? 0) + (g.pendingRequests ?? 0), 0);
-  const chats = 0; // mensagens 1:1 reais = Fase B
-  const groups = 0; // grupos de chat = Fase B
-  return { chats, groups, communities, total: chats + groups + communities };
-}
+// useMessagesBadges mudou para features/messages/hooks.ts (Fase B): soma
+// conversas 1:1 + grupos de chat + comunidades.
 
 /** Uma comunidade por id (ou slug). */
 export function useGroup(idOrSlug: string) {

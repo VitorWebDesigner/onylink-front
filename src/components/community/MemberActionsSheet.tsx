@@ -9,7 +9,23 @@ import { colors } from '../../theme/colors';
 import { PRESSED_OPACITY } from '../../theme/tokens';
 import { useAuth } from '../../store/auth';
 import { useFollowUser } from '../../features/connections/hooks';
-import type { Group, GroupMember } from '../../features/groups/types';
+import { useOpenDm } from '../../features/messages/hooks';
+
+/** Shape mínima — serve GroupMember (comunidade) e ChatMember (grupo de chat). */
+export interface MemberLike {
+  id: string;
+  name: string;
+  handle: string;
+  avatarPath: string | null;
+  roleTitle: string | null;
+  role: string;
+  followed: boolean;
+}
+/** Contexto de moderação — Group ou Conversation satisfazem estruturalmente. */
+export interface ModerationScope {
+  myRole?: string | null;
+  createdBy?: string | null;
+}
 
 function SquareAction({ icon, label, danger, onPress }: { icon: IconName; label: string; danger?: boolean; onPress: () => void }) {
   return (
@@ -30,8 +46,8 @@ function SquareAction({ icon, label, danger, onPress }: { icon: IconName; label:
  * Remover conforme papel) + card Cancelar embaixo.
  */
 export function MemberActionsSheet({ member, group, onClose, onPromote, onTransfer, onRemove }: {
-  member: GroupMember | null;
-  group: Group;
+  member: MemberLike | null;
+  group: ModerationScope;
   onClose: () => void;
   onPromote: (userId: string) => void;
   onTransfer: (userId: string, name: string) => void;
@@ -41,6 +57,7 @@ export function MemberActionsSheet({ member, group, onClose, onPromote, onTransf
   const toast = useToast();
   const me = useAuth((s) => s.user);
   const follow = useFollowUser();
+  const openDm = useOpenDm();
   const [followedOverride, setFollowedOverride] = useState<Record<string, boolean>>({});
 
   const m = member;
@@ -93,7 +110,17 @@ export function MemberActionsSheet({ member, group, onClose, onPromote, onTransf
                       follow.mutate({ userId: m.id, followed });
                     }}
                   />
-                  <SquareAction icon="chat" label="Mensagem" onPress={() => toast.info('Mensagens diretas em breve.')} />
+                  <SquareAction
+                    icon="chat"
+                    label="Mensagem"
+                    onPress={() => {
+                      onClose();
+                      openDm.mutate(m.id, {
+                        onSuccess: (conv) => router.push({ pathname: '/chat/[id]', params: { id: conv.id } }),
+                        onError: () => toast.error('Não foi possível abrir a conversa.'),
+                      });
+                    }}
+                  />
                   {canPromote ? <SquareAction icon="verified" label="Promover" onPress={() => { onClose(); onPromote(m.id); }} /> : null}
                   {canTransfer ? <SquareAction icon="authority" label="Transferir" onPress={() => { onClose(); onTransfer(m.id, m.name); }} /> : null}
                   {canRemove ? <SquareAction icon="close" label="Remover" danger onPress={() => { onClose(); onRemove(m.id); }} /> : null}
