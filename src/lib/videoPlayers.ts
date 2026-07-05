@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useMemo, useSyncExternalStore } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { createVideoPlayer, type VideoPlayer } from 'expo-video';
 
 /**
@@ -46,8 +46,8 @@ function peek(url: string): VideoPlayer {
 }
 
 function retain(url: string) {
-  const e = cache.get(url);
-  if (!e) return;
+  peek(url); // garante entry VIVA (se o grace liberou entre renders, recria)
+  const e = cache.get(url)!;
   if (e.timer) { clearTimeout(e.timer); e.timer = undefined; }
   e.refs += 1;
 }
@@ -59,10 +59,21 @@ function release(url: string) {
   if (e.refs <= 0) scheduleRelease(url);
 }
 
-/** Player compartilhado por URL — mesma instância no feed e na tela cheia. */
+/** Player compartilhado por URL — mesma instância no feed e na tela cheia.
+ *  ⚠️ Se o grace timer liberar a entry ENTRE o render e o effect (FlatList
+ *  reciclando devagar, renders descartados), o valor memoizado apontaria pra um
+ *  player RELEASED — setar qualquer prop nele crasha no Android ("Cannot use
+ *  shared object that was already released"). O effect revalida contra o cache
+ *  e troca pra instância viva. */
 export function useSharedVideoPlayer(url: string): VideoPlayer {
-  const player = useMemo(() => peek(url), [url]); // idempotente: sem side-effect de contagem
-  useEffect(() => { retain(url); return () => release(url); }, [url]);
+  const [player, setPlayer] = useState(() => peek(url));
+  useEffect(() => {
+    retain(url); // recria a entry se o grace já tiver liberado
+    const live = cache.get(url)!.player;
+    if (live !== player) setPlayer(live);
+    return () => release(url);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- revalida 1x por url
+  }, [url]);
   return player;
 }
 

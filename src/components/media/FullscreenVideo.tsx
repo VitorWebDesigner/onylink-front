@@ -137,13 +137,13 @@ export function FullscreenVideo({ item, post, r, insetTop, insetBottom, onReact,
   // limpa o timer de segurança do seek ao desmontar
   useEffect(() => () => { if (seekTimer.current) clearTimeout(seekTimer.current); }, []);
 
-  useEffect(() => { player.muted = muted; }, [muted, player]);
+  useEffect(() => { try { player.muted = muted; } catch { /* player released */ } }, [muted, player]);
 
   const cycleSpeed = () => {
     const next = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length]!;
     setSpeed(next);
     speedRef.current = next;
-    if (!holdingRef.current) player.playbackRate = next;
+    if (!holdingRef.current) { try { player.playbackRate = next; } catch { /* noop */ } }
   };
 
   const togglePlay = () => { try { if (player.playing) player.pause(); else player.play(); } catch { /* noop */ } };

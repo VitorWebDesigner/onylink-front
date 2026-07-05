@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Chip } from '../../components/Chip';
@@ -24,6 +24,8 @@ export default function Opportunities() {
 
   const data = mine ? my.data : list.data;
   const isLoading = mine ? my.isLoading : list.isLoading;
+  const refetch = mine ? my.refetch : list.refetch;
+  const isRefetching = mine ? my.isRefetching : list.isRefetching;
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
@@ -57,6 +59,7 @@ export default function Opportunities() {
         <FlatList
           data={data ?? []}
           keyExtractor={(o) => o.id}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} tintColor={colors.brand[500]} />}
           renderItem={({ item }) => (
             <OpportunityCard
               opportunity={item}

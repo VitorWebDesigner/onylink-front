@@ -75,7 +75,9 @@ export function FeedVideo({ item, active, onOpen, onDoubleTap, viewCount }: Prop
   }, [active, player]);
 
   useEffect(() => {
-    player.muted = muted;
+    // try/catch: player compartilhado pode ter sido liberado pelo grace do
+    // registry — setar prop em player released crasha no Android
+    try { player.muted = muted; } catch { /* noop */ }
   }, [muted, player]);
 
   const handleTap = () => {

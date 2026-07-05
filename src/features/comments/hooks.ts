@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { config } from '../../lib/config';
 import { mockComments } from '../../lib/mock';
-import { patchPostCaches } from '../feed/hooks';
+import { patchPostCaches } from '../feed/postCaches';
 import type { Comment } from './types';
 
 const key = (postId: string) => ['comments', postId];

@@ -100,20 +100,26 @@ const toUser = (r: RawUser): UserProfile => ({
  *  staleTime 0 → contadores sempre frescos ao entrar na tela (o otimista do follow
  *  mexe no cache; sem refetch os números ficavam defasados). */
 export function useUser(id: string) {
+  const qc = useQueryClient();
   return useQuery({
     queryKey: ['user', id],
     enabled: !!id,
     staleTime: 0,
+    // contadores (seguidores/posts) de TERCEIROS sobem com a tela aberta
+    refetchInterval: () => (qc.isMutating() ? false : 30_000),
     queryFn: async (): Promise<UserProfile> => toUser(await api.get<RawUser>(`/web/users/${id}`)),
   });
 }
 
 /** Perfil do usuário logado. Backend: GET /web/users/me. */
 export function useMe() {
+  const qc = useQueryClient();
   return useQuery({
     queryKey: ['user', 'me'],
     enabled: !config.mock.profile,
     staleTime: 0,
+    // ganhar seguidor/ponto reflete na aba Perfil sem reabrir o app
+    refetchInterval: () => (qc.isMutating() ? false : 30_000),
     queryFn: async (): Promise<UserProfile> => toUser(await api.get<RawUser>('/web/users/me')),
   });
 }
@@ -135,11 +141,14 @@ export interface UpdateProfileInput {
   interests?: string[];
 }
 
-/** Publicações de um usuário (aba do perfil; fixado vem primeiro). */
+/** Publicações de um usuário (aba do perfil; fixado vem primeiro).
+ *  staleTime 0 nas abas: cada entrada/troca de aba refaz o fetch (dados de
+ *  terceiros frescos sem polling permanente em todas as abas). */
 export function useUserPosts(id: string) {
   return useQuery({
     queryKey: ['user-posts', id],
     enabled: !!id && !config.mock.profile,
+    staleTime: 0,
     queryFn: async (): Promise<FeedPost[]> => {
       const { items } = await api.get<{ items: RawFeedRow[] }>(`/web/users/${id}/posts?limit=30&offset=0`);
       return items.map(toFeedPost);
@@ -152,6 +161,7 @@ export function useUserReposts(id: string, enabled = true) {
   return useQuery({
     queryKey: ['user-reposts', id],
     enabled: enabled && !!id && !config.mock.profile,
+    staleTime: 0,
     queryFn: async (): Promise<FeedPost[]> => {
       const { items } = await api.get<{ items: RawFeedRow[] }>(`/web/users/${id}/reposts?limit=30&offset=0`);
       return items.map(toFeedPost);
@@ -176,6 +186,7 @@ export function useUserComments(id: string, enabled = true) {
   return useQuery({
     queryKey: ['user-comments', id],
     enabled: enabled && !!id && !config.mock.profile,
+    staleTime: 0,
     queryFn: async (): Promise<UserCommentRow[]> => {
       const rows = await api.get<{ id: string; content: string; created_at: string; post_id: string; like_count: number; insight_count: number; reply_count: number; post_author_name: string; post_content: string | null }[]>(`/web/users/${id}/comments?limit=30&offset=0`);
       return (rows ?? []).map((r) => ({
@@ -199,6 +210,7 @@ export function useUserMedia(id: string, enabled = true) {
   return useQuery({
     queryKey: ['user-media', id],
     enabled: enabled && !!id && !config.mock.profile,
+    staleTime: 0,
     queryFn: async (): Promise<UserMediaItem[]> => {
       const rows = await api.get<{ post_id: string; type: string; url: string; thumbnail?: string }[]>(`/web/users/${id}/media?limit=60&offset=0`);
       return (rows ?? []).map((r) => ({ postId: r.post_id, type: r.type, url: r.url, thumbnail: r.thumbnail }));
@@ -278,6 +290,7 @@ export function useMyInsights(enabled = true) {
   return useQuery({
     queryKey: ['my-insights'],
     enabled: enabled && !config.mock.profile,
+    staleTime: 0, // painel sempre fresco ao abrir
     queryFn: async (): Promise<MyInsights> => {
       const r = await api.get<RawInsights>('/web/users/me/insights');
       return {

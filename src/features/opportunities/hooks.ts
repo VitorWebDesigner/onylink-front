@@ -5,10 +5,15 @@ import { mockOpportunities } from '../../lib/mock';
 import { applyCommentReaction, type CommentReactionKind } from '../comments/hooks';
 import { toOpportunity, type ApplicationQuestion, type Opportunity, type OpportunityApplication, type OpportunityComment, type OpportunityKind, type RawOpportunityRow } from './types';
 
-/** Lista oportunidades aprovadas, filtro opcional por tipo. Backend: GET /web/opportunities. */
+/** Lista oportunidades aprovadas, filtro opcional por tipo. Backend: GET /web/opportunities.
+ *  TEMPO REAL: refetch 20s — oportunidades novas e contadores de terceiros
+ *  entram sozinhos na aba (regra do dono: nada exige reabrir o app). */
 export function useOpportunities(kind?: OpportunityKind | null) {
+  const qc = useQueryClient();
   return useQuery({
     queryKey: ['opportunities', kind ?? 'all'],
+    staleTime: 0,
+    refetchInterval: () => (qc.isMutating() ? false : 20_000),
     queryFn: async (): Promise<Opportunity[]> => {
       if (config.mock.opportunities) {
         return kind ? mockOpportunities.filter((o) => o.kind === kind) : mockOpportunities;
@@ -300,8 +305,12 @@ const toApplication = (r: RawApplicationRow): OpportunityApplication => ({
 
 /** Oportunidades publicadas pelo dono (com nº de candidaturas). GET /web/opportunities/mine. */
 export function useMyOpportunities() {
+  const qc = useQueryClient();
   return useQuery({
     queryKey: ['my-opportunities'],
+    staleTime: 0,
+    // contagem de candidaturas sobe sozinha no chip Minhas
+    refetchInterval: () => (qc.isMutating() ? false : 30_000),
     queryFn: async (): Promise<Opportunity[]> => {
       if (config.mock.opportunities) return mockOpportunities.slice(0, 2).map((o) => ({ ...o, applicationCount: o.commentCount }));
       const rows = await api.get<RawOpportunityRow[]>('/web/opportunities/mine');

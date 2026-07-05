@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { config } from '../../lib/config';
-import { patchAuthorCaches } from '../feed/hooks';
+import { patchAuthorCaches } from '../feed/postCaches';
 
 export interface SuggestUser {
   id: string;

@@ -3,43 +3,12 @@ import { api } from '../../lib/api';
 import { config } from '../../lib/config';
 import { mockFeed } from '../../lib/mock';
 import { applyCommentReaction, type CommentReactionKind } from '../comments/hooks';
+import { invalidatePostCaches, patchAuthorCaches, patchPostCaches, POST_LIST_KEYS } from './postCaches';
 import { toFeedPost, type FeedPost, type PostCategory, type RawFeedRow } from './types';
 
-/**
- * Um post pode viver em VÁRIOS caches ao mesmo tempo: feed geral, feed de
- * comunidade (group-posts), abas do perfil (user-posts/user-reposts), busca
- * (search-posts) e o detalhe standalone (['post', id]). TODO toggle otimista
- * passa por aqui — senão post de comunidade (fora do feed geral) não reflete
- * a reação em lugar nenhum (bug real).
- */
-const POST_LIST_KEYS = [['feed'], ['group-posts'], ['user-posts'], ['user-reposts'], ['search-posts']] as const;
-
-export function patchPostCaches(qc: QueryClient, postId: string, patch: (p: FeedPost) => FeedPost) {
-  for (const key of POST_LIST_KEYS) {
-    qc.setQueriesData<FeedPost[]>({ queryKey: key }, (old) =>
-      old?.map((p) => (p.id === postId ? patch(p) : p)),
-    );
-  }
-  qc.setQueryData<FeedPost>(['post', postId], (old) => (old ? patch(old) : old));
-}
-
-/** Idem, mas por AUTOR (pílula Seguir replicada em todos os posts dele). */
-export function patchAuthorCaches(qc: QueryClient, authorId: string, patch: (p: FeedPost) => FeedPost) {
-  for (const key of POST_LIST_KEYS) {
-    qc.setQueriesData<FeedPost[]>({ queryKey: key }, (old) =>
-      old?.map((p) => (p.authorId === authorId ? patch(p) : p)),
-    );
-  }
-  qc.setQueriesData<FeedPost>({ queryKey: ['post'] }, (old) =>
-    old && old.authorId === authorId ? patch(old) : old,
-  );
-}
-
-/** Desfaz otimista re-buscando tudo que pode ter sido tocado (erro é raro). */
-function invalidatePostCaches(qc: QueryClient, postId?: string) {
-  for (const key of POST_LIST_KEYS) void qc.invalidateQueries({ queryKey: key });
-  if (postId) void qc.invalidateQueries({ queryKey: ['post', postId] });
-}
+// Helpers de cache de post moram em ./postCaches (arquivo SEM outros imports)
+// pra não criar require cycle com comments/hooks. Re-export por conveniência.
+export { patchPostCaches, patchAuthorCaches, POST_LIST_KEYS } from './postCaches';
 
 interface RawLiveRow {
   id: string;
