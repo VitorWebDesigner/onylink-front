@@ -15,8 +15,7 @@ import { colors } from '../../theme/colors';
 import { HIT_SLOP, PRESSED_OPACITY } from '../../theme/tokens';
 import { pickImages, uploadImage } from '../../lib/media';
 import { useAuth } from '../../store/auth';
-import { useSearchUsers, type SearchUser } from '../../features/search/hooks';
-import { useChatModeration, useConversation, useTogglePinConversation, useUpdateChatGroup } from '../../features/messages/hooks';
+import { useChatContacts, useChatModeration, useConversation, useTogglePinConversation, useUpdateChatGroup, type ChatContact } from '../../features/messages/hooks';
 import { conversationPhoto, conversationTitle } from '../../features/messages/types';
 import type { ChatMember } from '../../features/messages/types';
 
@@ -54,10 +53,17 @@ export default function ChatDetails() {
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
-  // adicionar participantes
+  // adicionar participantes — SÓ contatos (sigo/me seguem); filtro local
   const [q, setQ] = useState('');
-  const [selected, setSelected] = useState<SearchUser[]>([]);
-  const { data: results } = useSearchUsers(q);
+  const [selected, setSelected] = useState<ChatContact[]>([]);
+  const { data: contacts } = useChatContacts();
+  const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const candidates = (contacts ?? [])
+    .filter((u) => !conv?.members.some((m) => m.id === u.id))
+    .filter((u) => {
+      const t = norm(q.trim());
+      return !t || norm(u.name).includes(t) || norm(u.handle).includes(t.replace(/^@/, ''));
+    });
 
   // edição (admin)
   const [name, setName] = useState('');
@@ -271,13 +277,18 @@ export default function ChatDetails() {
             <TextInput
               value={q}
               onChangeText={setQ}
-              placeholder="Buscar por nome ou @usuário…"
+              placeholder="Filtrar por nome ou @usuário…"
               placeholderTextColor={colors.ink[400]}
               className="h-11 rounded-input px-4 bg-surface-muted text-ink-900 border border-surface-border"
             />
           </View>
           <SheetScrollView className="flex-1" keyboardShouldPersistTaps="handled">
-            {(results ?? []).filter((u) => !conv?.members.some((m) => m.id === u.id)).map((u) => {
+            {!candidates.length ? (
+              <Text className="text-ink-500 text-sm text-center py-8">
+                {q.trim() ? 'Ninguém na sua rede com esse nome.' : 'Todo mundo da sua rede já está no grupo.'}
+              </Text>
+            ) : null}
+            {candidates.map((u) => {
               const on = selected.some((x) => x.id === u.id);
               return (
                 <Pressable key={u.id} onPress={() => setSelected((s) => (on ? s.filter((x) => x.id !== u.id) : [...s, u]))} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })} className="flex-row items-center gap-3 px-4 py-3 border-b border-surface-border">

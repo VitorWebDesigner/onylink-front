@@ -111,6 +111,28 @@ export function useSendMessage(id: string) {
   });
 }
 
+export interface ChatContact {
+  id: string;
+  name: string;
+  handle: string;
+  avatarPath: string | null;
+  roleTitle: string | null;
+}
+
+/** CONTATOS (sigo OU me seguem) — candidatos a grupo de chat (decisão do dono).
+ *  A lista aparece INTEIRA abaixo do campo; a busca filtra localmente. */
+export function useChatContacts() {
+  return useQuery({
+    queryKey: ['chat-contacts'],
+    enabled: !config.mock.groups,
+    staleTime: 60_000,
+    queryFn: async (): Promise<ChatContact[]> => {
+      const rows = await api.get<{ id: string; name: string; handle: string; avatar_path: string | null; role_title: string | null }[]>('/web/messages/contacts');
+      return (rows ?? []).map((r) => ({ id: r.id, name: r.name, handle: r.handle, avatarPath: r.avatar_path, roleTitle: r.role_title }));
+    },
+  });
+}
+
 /** Abre (ou retorna) a conversa 1:1 com um usuário → devolve a Conversation. */
 export function useOpenDm() {
   const qc = useQueryClient();

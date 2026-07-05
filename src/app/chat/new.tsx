@@ -13,8 +13,7 @@ import { colors } from '../../theme/colors';
 import { PRESSED_OPACITY } from '../../theme/tokens';
 import { pickImages, uploadImage } from '../../lib/media';
 import { useKeyboardPadding } from '../../lib/keyboard';
-import { useSearchUsers, type SearchUser } from '../../features/search/hooks';
-import { useCreateChatGroup } from '../../features/messages/hooks';
+import { useCreateChatGroup, useChatContacts, type ChatContact } from '../../features/messages/hooks';
 
 const MAX_MEMBERS = 149; // + o criador = 150 (decisão §5.2)
 
@@ -27,9 +26,17 @@ export default function NewChatGroup() {
   const [photoPath, setPhotoPath] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [q, setQ] = useState('');
-  const [selected, setSelected] = useState<SearchUser[]>([]);
-  const { data: results, isLoading: searching } = useSearchUsers(q);
+  const [selected, setSelected] = useState<ChatContact[]>([]);
+  // só quem eu sigo OU me segue (decisão do dono); a lista fica SEMPRE visível
+  // abaixo do campo — a busca filtra localmente por nome/@handle
+  const { data: contacts, isLoading: loadingContacts } = useChatContacts();
   const kbPad = useKeyboardPadding();
+
+  const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const filtered = (contacts ?? []).filter((u) => {
+    const t = norm(q.trim());
+    return !t || norm(u.name).includes(t) || norm(u.handle).includes(t.replace(/^@/, ''));
+  });
 
   async function pickPhoto() {
     try {
@@ -45,7 +52,7 @@ export default function NewChatGroup() {
     }
   }
 
-  function toggle(u: SearchUser) {
+  function toggle(u: ChatContact) {
     setSelected((s) => {
       if (s.some((x) => x.id === u.id)) return s.filter((x) => x.id !== u.id);
       if (s.length >= MAX_MEMBERS) {
@@ -113,20 +120,25 @@ export default function NewChatGroup() {
             </View>
           ) : null}
 
-          {/* busca de participantes */}
+          {/* participantes: SÓ contatos (sigo/me seguem); lista sempre visível */}
           <View className="gap-2">
             <Text className="text-ink-500 text-sm font-semibold">Adicionar participantes ({selected.length + 1}/150)</Text>
             <TextInput
               value={q}
               onChangeText={setQ}
-              placeholder="Buscar por nome ou @usuário…"
+              placeholder="Filtrar por nome ou @usuário…"
               placeholderTextColor={colors.ink[400]}
               className="h-11 rounded-input px-4 bg-surface-muted text-ink-900 border border-surface-border"
             />
           </View>
 
-          {searching ? <ActivityIndicator color={colors.brand[500]} /> : null}
-          {(results ?? []).map((u) => {
+          {loadingContacts ? <ActivityIndicator color={colors.brand[500]} /> : null}
+          {!loadingContacts && !filtered.length ? (
+            <Text className="text-ink-500 text-sm text-center py-6">
+              {q.trim() ? 'Ninguém na sua rede com esse nome.' : 'Sua rede ainda está vazia — siga pessoas para criar grupos com elas.'}
+            </Text>
+          ) : null}
+          {filtered.map((u) => {
             const on = selected.some((x) => x.id === u.id);
             return (
               <Pressable key={u.id} onPress={() => toggle(u)} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })} className="flex-row items-center gap-3 py-1">

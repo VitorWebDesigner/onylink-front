@@ -15,6 +15,8 @@ import { colors } from '../../theme/colors';
 import { HIT_SLOP } from '../../theme/tokens';
 import { useAuth } from '../../store/auth';
 import { useUser } from '../../features/users/hooks';
+import { useOpenDm } from '../../features/messages/hooks';
+import { useToast } from '../../components/feedback/toast';
 
 /** Perfil PÚBLICO: perfil rico + Seguir/Contato + sugestões (só APÓS seguir) + abas. */
 export default function UserProfileScreen() {
@@ -23,6 +25,8 @@ export default function UserProfileScreen() {
   const me = useAuth((s) => s.user);
   const { data: u, isLoading, isError } = useUser(id);
   const followFlow = useFollowFlow();
+  const openDm = useOpenDm();
+  const toast = useToast();
   const [contactOpen, setContactOpen] = useState(false);
   const [follows, setFollows] = useState<FollowsKind | null>(null);
   const [tab, setTab] = useState<ProfileTab>('posts');
@@ -48,6 +52,18 @@ export default function UserProfileScreen() {
                   title={u.followed ? 'Seguindo' : 'Seguir'}
                   variant={u.followed ? 'secondary' : 'primary'}
                   onPress={() => followFlow.start({ id: u.id, name: u.name, avatarPath: u.avatarPath, followed: u.followed })}
+                />
+              </View>
+              {/* caminho pro chat 1:1 direto do perfil (Fase B) */}
+              <View className="flex-1">
+                <Button
+                  title="Mensagem"
+                  variant="secondary"
+                  loading={openDm.isPending}
+                  onPress={() => openDm.mutate(u.id, {
+                    onSuccess: (conv) => router.push({ pathname: '/chat/[id]', params: { id: conv.id } }),
+                    onError: () => toast.error('Não foi possível abrir a conversa.'),
+                  })}
                 />
               </View>
               {hasContact ? (
