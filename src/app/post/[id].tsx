@@ -21,7 +21,7 @@ import { useFollowFlow } from '../../components/follow/FollowFlowProvider';
 import { useKeyboardPadding } from '../../lib/keyboard';
 import { useDialog } from '../../components/feedback/dialog';
 import { PostMenuSheet } from '../../components/moderation/PostMenuSheet';
-import { ReportSheet } from '../../components/moderation/ReportSheet';
+import { ReportReasons, useSendReport } from '../../components/moderation/ReportSheet';
 import { afterSheetClose, BottomSheet } from '../../components/BottomSheet';
 import { useAddComment, useComments, useDeleteComment, useToggleCommentInsight, useToggleCommentLike, useToggleCommentRepost, useToggleCommentShare } from '../../features/comments/hooks';
 
@@ -52,7 +52,9 @@ export default function PostDetail() {
   const deleteComment = useDeleteComment(id);
   const [menuOpen, setMenuOpen] = useState(false);
   const [commentMenu, setCommentMenu] = useState<CommentNode | null>(null);
-  const [reportComment, setReportComment] = useState<string | null>(null);
+  const [commentStep, setCommentStep] = useState<'menu' | 'report'>('menu');
+  const sendReport = useSendReport();
+  const closeCommentMenu = () => { setCommentMenu(null); setCommentStep('menu'); };
 
   const post = postData ?? null;
   const count = comments?.length ?? 0;
@@ -159,56 +161,52 @@ export default function PostDetail() {
       {/* 3-pontos do header: denunciar/excluir a publicação */}
       <PostMenuSheet post={menuOpen ? post : null} onClose={() => setMenuOpen(false)} onDeleted={() => router.back()} />
 
-      {/* 3-pontos do COMENTÁRIO: denunciar (dos outros) / excluir (o meu) */}
-      <BottomSheet visible={!!commentMenu} onClose={() => setCommentMenu(null)}>
-        <View className="pb-2">
-          {commentMenu && commentMenu.authorId !== user?.id ? (
-            <Pressable
-              onPress={() => {
-                const cid = commentMenu.id;
-                setCommentMenu(null);
-                setTimeout(() => setReportComment(cid), 250); // sheets em sequência (§13)
-              }}
-              style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
-              className="flex-row items-center gap-3 px-4 py-4 border-b border-surface-border"
-            >
-              <Icon name="error" set="light" size={20} color={colors.ink[700]} />
-              <Text className="text-ink-900 text-[15px]">Denunciar comentário</Text>
-            </Pressable>
-          ) : null}
-          {commentMenu && commentMenu.authorId === user?.id ? (
-            <Pressable
-              onPress={() => {
-                const cid = commentMenu.id;
-                setCommentMenu(null);
-                void (async () => {
-                  await afterSheetClose();
-                  const ok = await dialog.confirm({
-                    title: 'Excluir comentário?',
-                    message: 'Ele some da conversa para todo mundo.',
-                    confirmText: 'Excluir',
-                    cancelText: 'Cancelar',
-                    destructive: true,
-                  });
-                  if (ok) deleteComment.mutate(cid, { onSuccess: () => toast.success('Comentário excluído.') });
-                })();
-              }}
-              style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
-              className="flex-row items-center gap-3 px-4 py-4 border-b border-surface-border"
-            >
-              <Icon name="trash" set="light" size={20} color={colors.danger} />
-              <Text className="text-danger font-semibold text-[15px]">Excluir comentário</Text>
-            </Pressable>
-          ) : null}
-        </View>
+      {/* 3-pontos do COMENTÁRIO: denunciar = passo no MESMO sheet / excluir (o meu) */}
+      <BottomSheet visible={!!commentMenu} onClose={closeCommentMenu}>
+        {commentStep === 'report' && commentMenu ? (
+          <ReportReasons
+            targetLabel="o comentário"
+            onPick={(reason) => { const cid = commentMenu.id; closeCommentMenu(); void sendReport('COMMENT', cid, reason); }}
+          />
+        ) : (
+          <View className="pb-2">
+            {commentMenu && commentMenu.authorId !== user?.id ? (
+              <Pressable
+                onPress={() => setCommentStep('report')}
+                style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
+                className="flex-row items-center gap-3 px-4 py-4 border-b border-surface-border"
+              >
+                <Icon name="error" set="light" size={20} color={colors.ink[700]} />
+                <Text className="text-ink-900 text-[15px]">Denunciar comentário</Text>
+              </Pressable>
+            ) : null}
+            {commentMenu && commentMenu.authorId === user?.id ? (
+              <Pressable
+                onPress={() => {
+                  const cid = commentMenu.id;
+                  closeCommentMenu();
+                  void (async () => {
+                    await afterSheetClose();
+                    const ok = await dialog.confirm({
+                      title: 'Excluir comentário?',
+                      message: 'Ele some da conversa para todo mundo.',
+                      confirmText: 'Excluir',
+                      cancelText: 'Cancelar',
+                      destructive: true,
+                    });
+                    if (ok) deleteComment.mutate(cid, { onSuccess: () => toast.success('Comentário excluído.') });
+                  })();
+                }}
+                style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
+                className="flex-row items-center gap-3 px-4 py-4 border-b border-surface-border"
+              >
+                <Icon name="trash" set="light" size={20} color={colors.danger} />
+                <Text className="text-danger font-semibold text-[15px]">Excluir comentário</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        )}
       </BottomSheet>
-
-      <ReportSheet
-        visible={!!reportComment}
-        targetType="COMMENT"
-        targetId={reportComment}
-        onClose={() => setReportComment(null)}
-      />
     </SafeAreaView>
   );
 }

@@ -22,7 +22,7 @@ import {
   useToggleOppInsight, useToggleOppLike,
 } from '../../features/opportunities/hooks';
 import { afterSheetClose, BottomSheet } from '../../components/BottomSheet';
-import { ReportSheet } from '../../components/moderation/ReportSheet';
+import { ReportReasons, useSendReport } from '../../components/moderation/ReportSheet';
 import { useDialog } from '../../components/feedback/dialog';
 import { KIND_META } from '../../features/opportunities/types';
 import { useAuth } from '../../store/auth';
@@ -50,7 +50,9 @@ export default function OpportunityDetail() {
   const dialog = useDialog();
   const deleteOpp = useDeleteOpportunity();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [reportAuthor, setReportAuthor] = useState(false);
+  const [menuStep, setMenuStep] = useState<'menu' | 'report'>('menu');
+  const sendReport = useSendReport();
+  const closeMenu = () => { setMenuOpen(false); setMenuStep('menu'); };
   const isOwner = !!o?.authorId && o.authorId === user?.id;
 
   const count = comments?.length ?? 0;
@@ -166,54 +168,54 @@ export default function OpportunityDetail() {
         </View>
       )}
 
-      {/* 3-pontos: denunciar autor · excluir (dono) — com confirmação + toast */}
-      <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)}>
-        <View className="pb-2">
-          {o && !isOwner && o.authorId ? (
-            <Pressable
-              onPress={() => { setMenuOpen(false); setTimeout(() => setReportAuthor(true), 250); }}
-              style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
-              className="flex-row items-center gap-3 px-4 py-4 border-b border-surface-border"
-            >
-              <Icon name="error" set="light" size={20} color={colors.ink[700]} />
-              <Text className="text-ink-900 text-[15px]">Denunciar {o.authorName}</Text>
-            </Pressable>
-          ) : null}
-          {o && isOwner ? (
-            <Pressable
-              onPress={() => {
-                setMenuOpen(false);
-                void (async () => {
-                  await afterSheetClose();
-                  const ok = await dialog.confirm({
-                    title: 'Excluir oportunidade?',
-                    message: 'Ela some da lista e as candidaturas deixam de aparecer.',
-                    confirmText: 'Excluir',
-                    cancelText: 'Cancelar',
-                    destructive: true,
-                  });
-                  if (ok) deleteOpp.mutate(o.id, {
-                    onSuccess: () => { toast.success('Oportunidade excluída.'); router.back(); },
-                    onError: () => toast.error('Não foi possível excluir.'),
-                  });
-                })();
-              }}
-              style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
-              className="flex-row items-center gap-3 px-4 py-4 border-b border-surface-border"
-            >
-              <Icon name="trash" set="light" size={20} color={colors.danger} />
-              <Text className="text-danger font-semibold text-[15px]">Excluir oportunidade</Text>
-            </Pressable>
-          ) : null}
-        </View>
+      {/* 3-pontos: denunciar autor (passo no MESMO sheet) · excluir (dono) */}
+      <BottomSheet visible={menuOpen} onClose={closeMenu}>
+        {menuStep === 'report' && o?.authorId ? (
+          <ReportReasons
+            targetLabel="o perfil"
+            onPick={(reason) => { const uid = o.authorId!; closeMenu(); void sendReport('USER', uid, reason); }}
+          />
+        ) : (
+          <View className="pb-2">
+            {o && !isOwner && o.authorId ? (
+              <Pressable
+                onPress={() => setMenuStep('report')}
+                style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
+                className="flex-row items-center gap-3 px-4 py-4 border-b border-surface-border"
+              >
+                <Icon name="error" set="light" size={20} color={colors.ink[700]} />
+                <Text className="text-ink-900 text-[15px]">Denunciar {o.authorName}</Text>
+              </Pressable>
+            ) : null}
+            {o && isOwner ? (
+              <Pressable
+                onPress={() => {
+                  closeMenu();
+                  void (async () => {
+                    await afterSheetClose();
+                    const ok = await dialog.confirm({
+                      title: 'Excluir oportunidade?',
+                      message: 'Ela some da lista e as candidaturas deixam de aparecer.',
+                      confirmText: 'Excluir',
+                      cancelText: 'Cancelar',
+                      destructive: true,
+                    });
+                    if (ok) deleteOpp.mutate(o.id, {
+                      onSuccess: () => { toast.success('Oportunidade excluída.'); router.back(); },
+                      onError: () => toast.error('Não foi possível excluir.'),
+                    });
+                  })();
+                }}
+                style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
+                className="flex-row items-center gap-3 px-4 py-4 border-b border-surface-border"
+              >
+                <Icon name="trash" set="light" size={20} color={colors.danger} />
+                <Text className="text-danger font-semibold text-[15px]">Excluir oportunidade</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        )}
       </BottomSheet>
-
-      <ReportSheet
-        visible={reportAuthor}
-        targetType="USER"
-        targetId={o?.authorId ?? null}
-        onClose={() => setReportAuthor(false)}
-      />
     </SafeAreaView>
   );
 }

@@ -17,7 +17,7 @@ import { useAuth } from '../../store/auth';
 import { useUser } from '../../features/users/hooks';
 import { useOpenDm } from '../../features/messages/hooks';
 import { useToast } from '../../components/feedback/toast';
-import { ReportSheet } from '../../components/moderation/ReportSheet';
+import { ReportReasons, useSendReport } from '../../components/moderation/ReportSheet';
 import { PostMenuSheet } from '../../components/moderation/PostMenuSheet';
 import { BottomSheet } from '../../components/BottomSheet';
 import { Share } from 'react-native';
@@ -34,7 +34,9 @@ export default function UserProfileScreen() {
   const toast = useToast();
   const [contactOpen, setContactOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [reportOpen, setReportOpen] = useState(false);
+  const [menuStep, setMenuStep] = useState<'menu' | 'report'>('menu');
+  const sendReport = useSendReport();
+  const closeMenu = () => { setMenuOpen(false); setMenuStep('menu'); };
   const [follows, setFollows] = useState<FollowsKind | null>(null);
   const [tab, setTab] = useState<ProfileTab>('posts');
   const [menuPost, setMenuPost] = useState<FeedPost | null>(null);
@@ -130,32 +132,37 @@ export default function UserProfileScreen() {
           />
           <ContactSheet visible={contactOpen} onClose={() => setContactOpen(false)} p={u} />
           <FollowsSheet userId={u.id} initialKind={follows ?? 'followers'} visible={!!follows} onClose={() => setFollows(null)} />
-          {/* menu → ações do perfil; Denunciar abre o sheet de motivos EM SEQUÊNCIA (§13) */}
-          <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)}>
-            <View className="pb-2">
-              <Pressable
-                onPress={() => {
-                  setMenuOpen(false);
-                  void Share.share({ message: `Conheça ${u.name} (@${u.handle}) no OnyLink — networking que gera negócio.` });
-                }}
-                style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
-                className="flex-row items-center gap-3 px-4 py-4 border-b border-surface-border"
-              >
-                <Icon name="send" set="light" size={20} color={colors.ink[700]} />
-                <Text className="text-ink-900 text-[15px]">Compartilhar perfil</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => { setMenuOpen(false); setTimeout(() => setReportOpen(true), 250); }}
-                style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
-                className="flex-row items-center gap-3 px-4 py-4 border-b border-surface-border"
-              >
-                <Icon name="error" set="light" size={20} color={colors.danger} />
-                <Text className="text-danger font-semibold text-[15px]">Denunciar</Text>
-              </Pressable>
-            </View>
+          {/* menu do perfil — Denunciar vira PASSO no MESMO sheet (nunca 2º Modal) */}
+          <BottomSheet visible={menuOpen} onClose={closeMenu}>
+            {menuStep === 'report' ? (
+              <ReportReasons
+                targetLabel="o perfil"
+                onPick={(reason) => { closeMenu(); void sendReport('USER', u.id, reason); }}
+              />
+            ) : (
+              <View className="pb-2">
+                <Pressable
+                  onPress={() => {
+                    closeMenu();
+                    void Share.share({ message: `Conheça ${u.name} (@${u.handle}) no OnyLink — networking que gera negócio.` });
+                  }}
+                  style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
+                  className="flex-row items-center gap-3 px-4 py-4 border-b border-surface-border"
+                >
+                  <Icon name="send" set="light" size={20} color={colors.ink[700]} />
+                  <Text className="text-ink-900 text-[15px]">Compartilhar perfil</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setMenuStep('report')}
+                  style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
+                  className="flex-row items-center gap-3 px-4 py-4 border-b border-surface-border"
+                >
+                  <Icon name="error" set="light" size={20} color={colors.danger} />
+                  <Text className="text-danger font-semibold text-[15px]">Denunciar</Text>
+                </Pressable>
+              </View>
+            )}
           </BottomSheet>
-
-          <ReportSheet visible={reportOpen} targetType="USER" targetId={u.id} onClose={() => setReportOpen(false)} />
           {/* 3-pontos dos posts das abas (denunciar/excluir) */}
           <PostMenuSheet post={menuPost} onClose={() => setMenuPost(null)} />
         </>

@@ -8,7 +8,7 @@ import { colors } from '../../theme/colors';
 import { PRESSED_OPACITY } from '../../theme/tokens';
 import { useAuth } from '../../store/auth';
 import { useDeletePost } from '../../features/feed/hooks';
-import { ReportSheet } from './ReportSheet';
+import { ReportReasons, useSendReport } from './ReportSheet';
 import type { FeedPost } from '../../features/feed/types';
 import type { ReportTargetType } from '../../features/moderation/hooks';
 
@@ -21,10 +21,12 @@ function Row({ icon, label, danger, onPress }: { icon: IconName; label: string; 
   );
 }
 
+interface ReportStep { type: ReportTargetType; id: string; label: string }
+
 /**
- * Menu dos 3-PONTOS do post (feed geral, detalhe, comunidade): Denunciar
- * publicação/autor (todos) · Excluir (só o autor). Sheets em SEQUÊNCIA
- * (Modal dentro de Modal não apresenta — §13).
+ * Menu dos 3-PONTOS do post (feed geral, detalhe, comunidade, abas do perfil).
+ * Denunciar troca o CONTEÚDO do MESMO sheet pros motivos (passo 2) — nunca um
+ * segundo Modal (montar Modal durante o dismiss de outro travava a tela).
  */
 export function PostMenuSheet({ post, onClose, onDeleted, extraRows }: {
   post: FeedPost | null;
@@ -38,19 +40,20 @@ export function PostMenuSheet({ post, onClose, onDeleted, extraRows }: {
   const dialog = useDialog();
   const me = useAuth((s) => s.user);
   const deletePost = useDeletePost();
-  const [report, setReport] = useState<{ type: ReportTargetType; id: string } | null>(null);
+  const sendReport = useSendReport();
+  const [reportStep, setReportStep] = useState<ReportStep | null>(null);
 
   const isAuthor = !!post?.authorId && post.authorId === me?.id;
 
-  // sheet de denúncia abre DEPOIS do menu fechar (sequencial — §13)
-  const openReport = (type: ReportTargetType, id: string) => {
+  const close = () => {
+    setReportStep(null);
     onClose();
-    setTimeout(() => setReport({ type, id }), 250);
   };
 
   async function onDelete() {
     if (!post) return;
-    onClose();
+    const id = post.id;
+    close();
     await afterSheetClose(); // Dialog só após o sheet desmontar (senão trava a tela)
     const ok = await dialog.confirm({
       title: 'Excluir publicação?',
@@ -59,37 +62,40 @@ export function PostMenuSheet({ post, onClose, onDeleted, extraRows }: {
       cancelText: 'Cancelar',
       destructive: true,
     });
-    if (ok) deletePost.mutate(post.id, {
+    if (ok) deletePost.mutate(id, {
       onSuccess: () => { toast.success('Publicação excluída.'); onDeleted?.(); },
       onError: () => toast.error('Não foi possível excluir.'),
     });
   }
 
   return (
-    <>
-      <BottomSheet visible={!!post} onClose={onClose}>
+    <BottomSheet visible={!!post} onClose={close}>
+      {reportStep ? (
+        // passo 2: motivos — MESMO sheet, só troca o conteúdo
+        <ReportReasons
+          targetLabel={reportStep.label}
+          onPick={(reason) => {
+            const s = reportStep;
+            close();
+            void sendReport(s.type, s.id, reason);
+          }}
+        />
+      ) : (
         <View className="pb-2">
           {(extraRows ?? []).map((r) => (
-            <Row key={r.label} icon={r.icon} label={r.label} onPress={() => { onClose(); r.onPress(); }} />
+            <Row key={r.label} icon={r.icon} label={r.label} onPress={() => { close(); r.onPress(); }} />
           ))}
           {!isAuthor && post ? (
             <>
-              <Row icon="error" label="Denunciar publicação" onPress={() => openReport('POST', post.id)} />
+              <Row icon="error" label="Denunciar publicação" onPress={() => setReportStep({ type: 'POST', id: post.id, label: 'a publicação' })} />
               {post.authorId ? (
-                <Row icon="user" label={`Denunciar ${post.authorName}`} onPress={() => openReport('USER', post.authorId!)} />
+                <Row icon="user" label={`Denunciar ${post.authorName}`} onPress={() => setReportStep({ type: 'USER', id: post.authorId!, label: 'o perfil' })} />
               ) : null}
             </>
           ) : null}
           {isAuthor ? <Row icon="trash" label="Excluir publicação" danger onPress={() => void onDelete()} /> : null}
         </View>
-      </BottomSheet>
-
-      <ReportSheet
-        visible={!!report}
-        targetType={report?.type ?? 'POST'}
-        targetId={report?.id ?? null}
-        onClose={() => setReport(null)}
-      />
-    </>
+      )}
+    </BottomSheet>
   );
 }
