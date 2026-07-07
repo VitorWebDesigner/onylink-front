@@ -1,11 +1,12 @@
 import { Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { colors } from '../theme/colors';
+import { colors, scoreColor } from '../theme/colors';
 
 /**
  * Anel de nota 0–100 (pedido do dono: círculos, não barras). Única primitiva —
  * Painel do Empresário e resultado do Diagnóstico usam a MESMA. `size` grande
- * (ex. 148) vira o anel-herói do total.
+ * (ex. 148) vira o anel-herói do total. Cor = SEMÁFORO da nota (pedido do
+ * dono): <40 vermelho · 40–69 amarelo · ≥70 verde.
  */
 export function ScoreRing({ label, value, size = 68, strokeWidth }: {
   label?: string;
@@ -26,7 +27,7 @@ export function ScoreRing({ label, value, size = 68, strokeWidth }: {
             cx={size / 2}
             cy={size / 2}
             r={r}
-            stroke={colors.accent[500]}
+            stroke={scoreColor(value)}
             strokeWidth={sw}
             fill="none"
             strokeLinecap="round"

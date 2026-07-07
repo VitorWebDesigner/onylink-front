@@ -38,6 +38,8 @@ module.exports = {
           border: '#E6E7EA', // hairline 0.5–1dp
         },
         danger: '#E5484D',
+        // semáforo de NOTA (anéis de maturidade): <40 low · 40–69 mid · ≥70 high
+        score: { low: '#E5484D', mid: '#F5B301', high: '#1F9D55' },
       },
       // Raios por componente (spec-design.md §3). Use rounded-btn, rounded-input...
       borderRadius: {

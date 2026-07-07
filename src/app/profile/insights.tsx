@@ -16,7 +16,7 @@ function Delta({ now, prev }: { now: number; prev: number }) {
   if (diff === 0) return <Text className="text-ink-400 text-xs">= mês anterior</Text>;
   const up = diff > 0;
   return (
-    <Text className="text-xs font-semibold" style={{ color: up ? '#1F9D55' : colors.danger }}>
+    <Text className="text-xs font-semibold" style={{ color: up ? colors.score.high : colors.danger }}>
       {up ? '▲' : '▼'} {up ? '+' : ''}{diff.toLocaleString('pt-BR')} vs. mês anterior
     </Text>
   );

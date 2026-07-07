@@ -12,4 +12,14 @@ export const colors = {
   // Cor de cada ação do post quando ativa. SÓ insight (amarelo) e curtir (vermelho)
   // têm cor própria; comentar/repostar/enviar ficam NEUTROS (cinza escuro).
   action: { insight: '#F5B301', like: '#E5484D', comment: '#3A3F52', repost: '#3A3F52', send: '#3A3F52' },
+  // Semáforo de NOTA (anéis de maturidade, deltas): <40 vermelho · 40–69 amarelo · ≥70 verde.
+  score: { low: '#E5484D', mid: '#F5B301', high: '#1F9D55' },
 } as const;
+
+/** Cor da nota 0–100 (faixas do semáforo acima). */
+export function scoreColor(value: number | null): string {
+  const v = value ?? 0;
+  if (v < 40) return colors.score.low;
+  if (v < 70) return colors.score.mid;
+  return colors.score.high;
+}
