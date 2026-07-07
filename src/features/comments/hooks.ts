@@ -112,6 +112,19 @@ export function useAddComment(postId: string) {
   });
 }
 
+/** Exclui o PRÓPRIO comentário (o back valida autoria). */
+export function useDeleteComment(postId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (commentId: string) => api.delete(`/web/posts/comments/${commentId}`),
+    onSuccess: (_d, commentId) => {
+      qc.setQueryData<Comment[]>(key(postId), (old) => old?.filter((c) => c.id !== commentId && c.parentId !== commentId));
+      patchPostCaches(qc, postId, (p) => ({ ...p, commentCount: Math.max(0, p.commentCount - 1) }));
+      void qc.invalidateQueries({ queryKey: key(postId) });
+    },
+  });
+}
+
 export type CommentReactionKind = 'like' | 'insight' | 'repost' | 'share';
 
 /** Aplica o toggle de uma reação a um comentário no objeto (contador + flag). */

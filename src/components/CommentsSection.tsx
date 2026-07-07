@@ -11,6 +11,7 @@ interface Props {
   onToggleShare: (c: CommentNode) => void;
   onReply: (c: CommentNode) => void;
   onOpenUser?: (userId: string) => void;
+  onMenu?: (c: CommentNode) => void;
 }
 
 // Comentário PRIMÁRIO sempre aparece; só paginamos se houver MUITOS primários.
@@ -23,7 +24,7 @@ const ROOT_BATCH = 8;
  * INITIAL_ROOTS); se houver mais, um "Ver mais" revela em lotes. Respostas muito
  * numerosas de um comentário colapsam dentro do próprio comentário (CommentThread).
  */
-export function CommentsSection({ comments, onToggleLike, onToggleInsight, onToggleRepost, onToggleShare, onReply, onOpenUser }: Props) {
+export function CommentsSection({ comments, onToggleLike, onToggleInsight, onToggleRepost, onToggleShare, onReply, onOpenUser, onMenu }: Props) {
   const byId = new Map(comments.map((c) => [c.id, c]));
   const roots = comments.filter((c) => !c.parentId || !byId.has(c.parentId));
   const [shown, setShown] = useState(INITIAL_ROOTS);
@@ -42,6 +43,7 @@ export function CommentsSection({ comments, onToggleLike, onToggleInsight, onTog
         onToggleShare={onToggleShare}
         onReply={onReply}
         onOpenUser={onOpenUser}
+        onMenu={onMenu}
       />
       {remaining > 0 ? (
         <Pressable

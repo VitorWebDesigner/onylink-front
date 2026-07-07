@@ -19,6 +19,7 @@ import { syncFeedLiveCounts, useFeed, useToggleInsight, useToggleLike, useToggle
 import { useUnreadCount } from '../../features/notifications/hooks';
 import { useFollowFlow } from '../../components/follow/FollowFlowProvider';
 import { useMediaUi } from '../../store/mediaUi';
+import { PostMenuSheet } from '../../components/moderation/PostMenuSheet';
 import type { FeedPost } from '../../features/feed/types';
 
 const LIVE_POLL_MS = 7000; // intervalo do polling de reações ao vivo (item 2)
@@ -73,6 +74,7 @@ export default function Feed() {
   // cache → pill "Novas publicações"). Nunca refetch automático: a lista não pode
   // reordenar sob o dedo do usuário — quem decide é o toque na pill.
   const [hasNew, setHasNew] = useState(false);
+  const [menuPost, setMenuPost] = useState<FeedPost | null>(null);
   useFocusEffect(
     useCallback(() => {
       const tick = async () => {
@@ -169,6 +171,7 @@ export default function Feed() {
               onCommentReact={(postId, commentId, kind, active) => toggleTopComment.mutate({ postId, commentId, kind, active })}
               onToggleFollow={(p) => { if (p.authorId) followFlow.start({ id: p.authorId, name: p.authorName, avatarPath: p.authorAvatar, followed: p.authorFollowed }); }}
               isAuthor={item.authorId === user?.id}
+              onMenu={(p) => setMenuPost(p)}
               onOpen={(p) => router.push({ pathname: '/post/[id]', params: { id: p.id } })}
               onOpenAuthor={(p) => { if (p.authorId) router.push({ pathname: '/user/[id]', params: { id: p.authorId } }); }}
               onComment={(p) => router.push({ pathname: '/post/[id]', params: { id: p.id, focus: '1' } })}
@@ -183,6 +186,9 @@ export default function Feed() {
           }
         />
       )}
+
+      {/* 3-pontos do post: denunciar publicação/autor · excluir (autor) */}
+      <PostMenuSheet post={menuPost} onClose={() => setMenuPost(null)} />
 
       {/* pill "Novas publicações" — post novo de terceiros detectado pelo polling */}
       {hasNew ? (

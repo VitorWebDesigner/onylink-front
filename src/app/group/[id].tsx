@@ -10,6 +10,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { Icon } from '../../components/Icon';
 import { CommunityCircle } from '../../components/community/CommunitiesList';
 import { CountBadge } from '../../components/CountBadge';
+import { PostMenuSheet } from '../../components/moderation/PostMenuSheet';
 import type { Group } from '../../features/groups/types';
 import { colors } from '../../theme/colors';
 import { HIT_SLOP, PRESSED_OPACITY } from '../../theme/tokens';
@@ -151,7 +152,7 @@ export default function CommunityFeed() {
             <PostCard
               post={item}
               isAuthor={item.authorId === me?.id}
-              onMenu={isAdmin ? (po) => setAdminTarget(po) : undefined}
+              onMenu={(po) => setAdminTarget(po)}
               onToggleInsight={(p) => toggleInsight.mutate({ postId: p.id, insighted: p.insighted })}
               onToggleLike={(p) => toggleLike.mutate({ postId: p.id, liked: p.liked })}
               onToggleRepost={(p) => { toggleRepost.mutate({ postId: p.id, reposted: p.reposted }); if (!p.reposted) toast.success('Repostado!'); }}
@@ -176,31 +177,23 @@ export default function CommunityFeed() {
         />
       )}
 
-      {/* menu do ADMIN no post: repostar/remover do feed geral */}
-      <BottomSheet visible={!!adminTarget} onClose={() => setAdminTarget(null)}>
-        <View className="pb-2">
-          <Pressable
-            onPress={() => {
-              if (adminTarget) {
-                const currentlyFeatured = !!adminTarget.featuredByName;
-                feature.mutate(
-                  { postId: adminTarget.id, featured: currentlyFeatured },
-                  { onError: (e) => toast.error(e instanceof Error ? e.message : 'Não foi possível atualizar.') },
-                );
-                toast.success(currentlyFeatured ? 'Removido do feed geral.' : 'Repostado no feed geral!');
-              }
-              setAdminTarget(null);
-            }}
-            style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
-            className="flex-row items-center gap-3 px-4 py-4"
-          >
-            <Icon name="repost" set="light" size={22} color={colors.ink[900]} />
-            <Text className="text-ink-900 font-semibold text-[15px]">
-              {adminTarget?.featuredByName ? 'Remover do feed geral' : 'Repostar no feed geral'}
-            </Text>
-          </Pressable>
-        </View>
-      </BottomSheet>
+      {/* menu do post: denunciar/excluir (todos) + destacar no feed (só admin) */}
+      <PostMenuSheet
+        post={adminTarget}
+        onClose={() => setAdminTarget(null)}
+        extraRows={isAdmin && adminTarget ? [{
+          icon: 'repost',
+          label: adminTarget.featuredByName ? 'Remover do feed geral' : 'Repostar no feed geral',
+          onPress: () => {
+            const currentlyFeatured = !!adminTarget.featuredByName;
+            feature.mutate(
+              { postId: adminTarget.id, featured: currentlyFeatured },
+              { onError: (e) => toast.error(e instanceof Error ? e.message : 'Não foi possível atualizar.') },
+            );
+            toast.success(currentlyFeatured ? 'Removido do feed geral.' : 'Repostado no feed geral!');
+          },
+        }] : undefined}
+      />
     </SafeAreaView>
   );
 }

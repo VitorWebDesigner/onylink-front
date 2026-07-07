@@ -94,6 +94,7 @@ function AuthGate() {
       <Stack.Screen name="camera" options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="search" />
       <Stack.Screen name="notifications" />
+      <Stack.Screen name="moderation" />
       <Stack.Screen name="opportunity/new" options={{ presentation: 'modal' }} />
     </Stack>
   );

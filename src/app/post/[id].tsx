@@ -19,7 +19,11 @@ import {
 } from '../../features/feed/hooks';
 import { useFollowFlow } from '../../components/follow/FollowFlowProvider';
 import { useKeyboardPadding } from '../../lib/keyboard';
-import { useAddComment, useComments, useToggleCommentInsight, useToggleCommentLike, useToggleCommentRepost, useToggleCommentShare } from '../../features/comments/hooks';
+import { useDialog } from '../../components/feedback/dialog';
+import { PostMenuSheet } from '../../components/moderation/PostMenuSheet';
+import { ReportSheet } from '../../components/moderation/ReportSheet';
+import { BottomSheet } from '../../components/BottomSheet';
+import { useAddComment, useComments, useDeleteComment, useToggleCommentInsight, useToggleCommentLike, useToggleCommentRepost, useToggleCommentShare } from '../../features/comments/hooks';
 
 export default function PostDetail() {
   const { id, focus } = useLocalSearchParams<{ id: string; focus?: string }>();
@@ -44,6 +48,11 @@ export default function PostDetail() {
   const [text, setText] = useState('');
   const [replyTo, setReplyTo] = useState<CommentNode | null>(null);
   const kbPad = useKeyboardPadding(); // sobe o composer nos DOIS SOs (Android edge-to-edge não redimensiona)
+  const dialog = useDialog();
+  const deleteComment = useDeleteComment(id);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [commentMenu, setCommentMenu] = useState<CommentNode | null>(null);
+  const [reportComment, setReportComment] = useState<string | null>(null);
 
   const post = postData ?? null;
   const count = comments?.length ?? 0;
@@ -83,7 +92,7 @@ export default function PostDetail() {
           >
             <Icon name="bell" set={post?.subscribed ? 'bold' : 'light'} size={23} color={post?.subscribed ? colors.brand[500] : colors.ink[900]} />
           </Pressable>
-          <Pressable hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })} className="w-8 h-8 rounded-full border border-surface-border items-center justify-center">
+          <Pressable onPress={() => setMenuOpen(true)} hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })} className="w-8 h-8 rounded-full border border-surface-border items-center justify-center">
             <Icon name="more" size={16} color={colors.ink[900]} />
           </Pressable>
         </View>
@@ -127,6 +136,7 @@ export default function PostDetail() {
                 onToggleShare={(c) => shareComment.mutate({ commentId: c.id, active: c.shared })}
                 onReply={(c) => setReplyTo(c)}
                 onOpenUser={(userId) => router.push({ pathname: '/user/[id]', params: { id: userId } })}
+                onMenu={(c) => setCommentMenu(c)}
               />
             </View>
           </ScrollView>
@@ -145,6 +155,59 @@ export default function PostDetail() {
           />
         </View>
       )}
+
+      {/* 3-pontos do header: denunciar/excluir a publicação */}
+      <PostMenuSheet post={menuOpen ? post : null} onClose={() => setMenuOpen(false)} onDeleted={() => router.back()} />
+
+      {/* 3-pontos do COMENTÁRIO: denunciar (dos outros) / excluir (o meu) */}
+      <BottomSheet visible={!!commentMenu} onClose={() => setCommentMenu(null)}>
+        <View className="pb-2">
+          {commentMenu && commentMenu.authorId !== user?.id ? (
+            <Pressable
+              onPress={() => {
+                const cid = commentMenu.id;
+                setCommentMenu(null);
+                setTimeout(() => setReportComment(cid), 250); // sheets em sequência (§13)
+              }}
+              style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
+              className="flex-row items-center gap-3 px-4 py-4 border-b border-surface-border"
+            >
+              <Icon name="error" set="light" size={20} color={colors.ink[700]} />
+              <Text className="text-ink-900 text-[15px]">Denunciar comentário</Text>
+            </Pressable>
+          ) : null}
+          {commentMenu && commentMenu.authorId === user?.id ? (
+            <Pressable
+              onPress={() => {
+                const cid = commentMenu.id;
+                setCommentMenu(null);
+                void (async () => {
+                  const ok = await dialog.confirm({
+                    title: 'Excluir comentário?',
+                    message: 'Ele some da conversa para todo mundo.',
+                    confirmText: 'Excluir',
+                    cancelText: 'Cancelar',
+                    destructive: true,
+                  });
+                  if (ok) deleteComment.mutate(cid, { onSuccess: () => toast.success('Comentário excluído.') });
+                })();
+              }}
+              style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
+              className="flex-row items-center gap-3 px-4 py-4 border-b border-surface-border"
+            >
+              <Icon name="trash" set="light" size={20} color={colors.danger} />
+              <Text className="text-danger font-semibold text-[15px]">Excluir comentário</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </BottomSheet>
+
+      <ReportSheet
+        visible={!!reportComment}
+        targetType="COMMENT"
+        targetId={reportComment}
+        onClose={() => setReportComment(null)}
+      />
     </SafeAreaView>
   );
 }

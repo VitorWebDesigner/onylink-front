@@ -161,6 +161,20 @@ export function useToggleFollowAuthor() {
   });
 }
 
+/** Exclui o PRÓPRIO post e o remove de todas as listas na hora. */
+export function useDeletePost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (postId: string) => api.delete(`/web/posts/${postId}`),
+    onSuccess: (_d, postId) => {
+      for (const key of POST_LIST_KEYS) {
+        qc.setQueriesData<FeedPost[]>({ queryKey: key }, (old) => old?.filter((p) => p.id !== postId));
+      }
+      qc.removeQueries({ queryKey: ['post', postId] });
+    },
+  });
+}
+
 /** Fixa/desafixa um post no PRÓPRIO perfil (1 por usuário; fixar troca o anterior). */
 export function usePinPost() {
   const qc = useQueryClient();

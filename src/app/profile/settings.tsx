@@ -28,6 +28,7 @@ function SectionTitle({ children }: { children: string }) {
 export default function SettingsScreen() {
   const router = useRouter();
   const logout = useAuth((s) => s.logout);
+  const me = useAuth((s) => s.user);
   const { data: p } = useMe();
 
   return (
@@ -48,6 +49,13 @@ export default function SettingsScreen() {
           <>
             <SectionTitle>Profissional</SectionTitle>
             <Row icon="chart" label="Painel do Empresário" sub="Métricas dos últimos 30 dias" onPress={() => router.push('/profile/insights')} />
+          </>
+        ) : null}
+
+        {me?.role === 'ADMIN' ? (
+          <>
+            <SectionTitle>Administração</SectionTitle>
+            <Row icon="error" label="Moderação" sub="Fila de denúncias da comunidade" onPress={() => router.push('/moderation')} />
           </>
         ) : null}
 

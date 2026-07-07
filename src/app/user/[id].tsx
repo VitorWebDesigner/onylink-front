@@ -12,11 +12,12 @@ import { ProfileTabsBar, useProfileTabList, type ProfileTab } from '../../compon
 import { SuggestionsRow } from '../../components/profile/SuggestionsRow';
 import { useFollowFlow } from '../../components/follow/FollowFlowProvider';
 import { colors } from '../../theme/colors';
-import { HIT_SLOP } from '../../theme/tokens';
+import { HIT_SLOP, PRESSED_OPACITY } from '../../theme/tokens';
 import { useAuth } from '../../store/auth';
 import { useUser } from '../../features/users/hooks';
 import { useOpenDm } from '../../features/messages/hooks';
 import { useToast } from '../../components/feedback/toast';
+import { ReportSheet } from '../../components/moderation/ReportSheet';
 
 /** Perfil PÚBLICO: perfil rico + Seguir/Contato + sugestões (só APÓS seguir) + abas. */
 export default function UserProfileScreen() {
@@ -28,6 +29,7 @@ export default function UserProfileScreen() {
   const openDm = useOpenDm();
   const toast = useToast();
   const [contactOpen, setContactOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [follows, setFollows] = useState<FollowsKind | null>(null);
   const [tab, setTab] = useState<ProfileTab>('posts');
   // abas usam o id RESOLVIDO (a rota aceita @handle nas menções da bio — Fase 4)
@@ -89,7 +91,13 @@ export default function UserProfileScreen() {
         <Pressable onPress={() => router.back()} hitSlop={HIT_SLOP}>
           <Icon name="back" size={24} color={colors.ink[900]} />
         </Pressable>
-        <Text className="text-ink-900 font-semibold text-base">{u ? `@${u.handle}` : 'Perfil'}</Text>
+        <Text className="text-ink-900 font-semibold text-base flex-1">{u ? `@${u.handle}` : 'Perfil'}</Text>
+        {/* denunciar o perfil (só perfil de terceiros) */}
+        {u && !isMe ? (
+          <Pressable onPress={() => setReportOpen(true)} hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })} className="w-8 h-8 rounded-full border border-surface-border items-center justify-center">
+            <Icon name="more" size={16} color={colors.ink[900]} />
+          </Pressable>
+        ) : null}
       </View>
 
       {isLoading ? (
@@ -116,6 +124,7 @@ export default function UserProfileScreen() {
           />
           <ContactSheet visible={contactOpen} onClose={() => setContactOpen(false)} p={u} />
           <FollowsSheet userId={u.id} initialKind={follows ?? 'followers'} visible={!!follows} onClose={() => setFollows(null)} />
+          <ReportSheet visible={reportOpen} targetType="USER" targetId={u.id} onClose={() => setReportOpen(false)} />
         </>
       )}
     </SafeAreaView>
