@@ -6,6 +6,7 @@ import { AnimatedReaction } from './AnimatedReaction';
 import { colors } from '../theme/colors';
 import { HIT_SLOP, PRESSED_OPACITY } from '../theme/tokens';
 import { timeAgo } from '../lib/time';
+import { UserBadges } from './UserBadges';
 
 /** Forma normalizada de um comentário (post ou oportunidade) — item 4. Mini-post: 5 ações. */
 export interface CommentNode {
@@ -14,6 +15,8 @@ export interface CommentNode {
   authorName: string;
   authorAvatar?: string | null;
   authorRoleTitle?: string | null;
+  authorVerified?: boolean;
+  authorAdmin?: boolean;
   content: string;
   createdAt: string;
   parentId: string | null;
@@ -56,6 +59,7 @@ function CommentBody({ c, onToggleLike, onToggleInsight, onToggleRepost, onToggl
         <Pressable onPress={onOpenUser && c.authorId ? () => onOpenUser(c.authorId!) : undefined} hitSlop={6} className="shrink" style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
           <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{c.authorName}</Text>
         </Pressable>
+        <UserBadges verified={c.authorVerified} admin={c.authorAdmin} size={13} />
         <Text className="text-ink-400 text-micro">{timeAgo(c.createdAt)}</Text>
         <View className="flex-1" />
         <Pressable onPress={onMenu ? () => onMenu(c) : undefined} hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })} className="w-6 h-6 rounded-full border border-surface-border items-center justify-center">

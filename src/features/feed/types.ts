@@ -13,6 +13,8 @@ export interface TopComment {
   id: string;
   authorId?: string | null;
   authorName: string;
+  authorVerified?: boolean;
+  authorAdmin?: boolean;
   content: string;
   likeCount: number;
   insightCount: number;
@@ -40,6 +42,9 @@ export interface FeedPost {
   authorName: string;
   authorRoleTitle?: string | null;
   authorAvatar?: string | null;
+  /** Selos do autor (mostrados ao lado do nome em TODO lugar — §13). */
+  authorVerified?: boolean;
+  authorAdmin?: boolean;
   likeCount: number;
   commentCount: number;
   repostCount: number;
@@ -81,6 +86,8 @@ export interface RawFeedRow {
   created_at: string;
   author_name: string;
   author_avatar?: string | null;
+  author_verified?: boolean;
+  author_admin?: boolean;
   liked?: boolean;
   saved?: boolean;
   reposted?: boolean;
@@ -107,6 +114,8 @@ export interface RawFeedRow {
   top_comment_insighted?: boolean | null;
   top_comment_reposted?: boolean | null;
   top_comment_shared?: boolean | null;
+  top_comment_author_verified?: boolean | null;
+  top_comment_author_admin?: boolean | null;
 }
 
 /**
@@ -128,6 +137,8 @@ export function toFeedPost(r: RawFeedRow): FeedPost {
     media: r.media ?? [],
     authorName: r.author_name,
     authorAvatar: r.author_avatar ?? null,
+    authorVerified: Boolean(r.author_verified),
+    authorAdmin: Boolean(r.author_admin),
     likeCount: r.like_count,
     commentCount: r.comment_count,
     repostCount: r.repost_count ?? 0,
@@ -152,6 +163,8 @@ export function toFeedPost(r: RawFeedRow): FeedPost {
           id: r.top_comment_id,
           authorId: r.top_comment_author_id ?? null,
           authorName: r.top_comment_author ?? '',
+          authorVerified: Boolean(r.top_comment_author_verified),
+          authorAdmin: Boolean(r.top_comment_author_admin),
           content: r.top_comment_content ?? '',
           likeCount: r.top_comment_like_count ?? 0,
           insightCount: r.top_comment_insight_count ?? 0,

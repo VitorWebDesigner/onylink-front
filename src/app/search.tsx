@@ -6,6 +6,7 @@ import { Avatar } from '../components/Avatar';
 import { Button } from '../components/Button';
 import { Icon } from '../components/Icon';
 import { SectionHeader } from '../components/SectionHeader';
+import { UserBadges } from '../components/UserBadges';
 import { colors } from '../theme/colors';
 import { HIT_SLOP, PRESSED_OPACITY } from '../theme/tokens';
 import { timeAgo } from '../lib/time';
@@ -41,6 +42,7 @@ export default function Search() {
           <Pressable onPress={p.authorId ? () => router.push({ pathname: '/user/[id]', params: { id: p.authorId! } }) : undefined} hitSlop={6} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
             <Text className="text-ink-900 font-semibold text-sm">{p.authorName}</Text>
           </Pressable>
+          <UserBadges verified={p.authorVerified} admin={p.authorAdmin} size={12} />
           <Text className="text-ink-400 text-[13px]">· {timeAgo(p.createdAt)}</Text>
         </View>
         <Text className="text-ink-700 leading-5" numberOfLines={2}>{p.content}</Text>
@@ -57,7 +59,10 @@ export default function Search() {
       >
         <Avatar name={u.name} uri={u.avatarPath} size="lg" />
         <View className="flex-1">
-          <Text className="text-ink-900 font-semibold text-sm">@{u.handle}</Text>
+          <View className="flex-row items-center gap-1.5">
+            <Text className="text-ink-900 font-semibold text-sm shrink" numberOfLines={1}>@{u.handle}</Text>
+            <UserBadges verified={u.verified} admin={u.admin} size={13} />
+          </View>
           <Text className="text-ink-500 text-[13px]" numberOfLines={1}>
             {u.name}{u.roleTitle ? ` · ${u.roleTitle}` : u.segment ? ` · ${u.segment}` : ''}
           </Text>

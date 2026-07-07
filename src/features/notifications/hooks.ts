@@ -25,6 +25,8 @@ export interface AppNotification {
   actorName: string | null;
   actorHandle: string | null;
   actorAvatar: string | null;
+  actorVerified?: boolean;
+  actorAdmin?: boolean;
 }
 
 interface RawNotification {
@@ -37,6 +39,8 @@ interface RawNotification {
   actor_name: string | null;
   actor_handle: string | null;
   actor_avatar: string | null;
+  actor_verified?: boolean;
+  actor_admin?: boolean;
 }
 
 const toNotification = (r: RawNotification): AppNotification => ({
@@ -54,6 +58,8 @@ const toNotification = (r: RawNotification): AppNotification => ({
   actorName: r.actor_name,
   actorHandle: r.actor_handle,
   actorAvatar: r.actor_avatar,
+  actorVerified: Boolean(r.actor_verified),
+  actorAdmin: Boolean(r.actor_admin),
 });
 
 /** Lista de notificações (sino). Backend: GET /web/notifications. */

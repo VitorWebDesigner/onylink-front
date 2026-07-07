@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { Avatar } from '../components/Avatar';
 import { EmptyState } from '../components/EmptyState';
 import { Icon, type IconName } from '../components/Icon';
+import { UserBadges } from '../components/UserBadges';
 import { colors } from '../theme/colors';
 import { HIT_SLOP, PRESSED_OPACITY } from '../theme/tokens';
 import { timeAgo } from '../lib/time';
@@ -105,6 +106,8 @@ export default function NotificationsScreen() {
                 <View className="flex-1">
                   <Text className="text-ink-700 leading-5" numberOfLines={2}>
                     {n.actorName ? <Text className="text-ink-900 font-semibold">{n.actorName} </Text> : null}
+                    {n.actorVerified || n.actorAdmin ? <UserBadges verified={n.actorVerified} admin={n.actorAdmin} size={12} /> : null}
+                    {n.actorVerified || n.actorAdmin ? ' ' : null}
                     {text}
                     {n.preview ? <Text className="text-ink-500">{` · “${n.preview}”`}</Text> : null}
                   </Text>

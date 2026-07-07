@@ -145,8 +145,8 @@ export function useGroupMembers(id: string, enabled = true) {
     enabled: !!id && enabled && !config.mock.groups,
     staleTime: 0,
     queryFn: async (): Promise<GroupMember[]> => {
-      const rows = await api.get<{ id: string; name: string; handle: string; avatar_path: string | null; role_title: string | null; role: string; followed: boolean }[]>(`/web/groups/${id}/members?limit=200`);
-      return (rows ?? []).map((r) => ({ id: r.id, name: r.name, handle: r.handle, avatarPath: r.avatar_path, roleTitle: r.role_title, role: r.role, followed: Boolean(r.followed) }));
+      const rows = await api.get<{ id: string; name: string; handle: string; avatar_path: string | null; role_title: string | null; role: string; followed: boolean; verified?: boolean; is_admin?: boolean }[]>(`/web/groups/${id}/members?limit=200`);
+      return (rows ?? []).map((r) => ({ id: r.id, name: r.name, handle: r.handle, avatarPath: r.avatar_path, roleTitle: r.role_title, role: r.role, followed: Boolean(r.followed), verified: Boolean(r.verified), admin: Boolean(r.is_admin) }));
     },
   });
 }

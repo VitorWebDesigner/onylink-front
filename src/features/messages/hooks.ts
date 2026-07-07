@@ -12,6 +12,8 @@ interface RawMessageRow {
   sender_id: string;
   sender_name: string;
   sender_avatar: string | null;
+  sender_verified?: boolean;
+  sender_admin?: boolean;
   content: string;
   created_at: string;
 }
@@ -22,6 +24,8 @@ const toMessage = (r: RawMessageRow): ChatMessage => ({
   senderId: r.sender_id,
   senderName: r.sender_name,
   senderAvatar: r.sender_avatar,
+  senderVerified: Boolean(r.sender_verified),
+  senderAdmin: Boolean(r.sender_admin),
   content: r.content,
   createdAt: r.created_at,
 });
@@ -51,10 +55,10 @@ export function useConversation(id: string) {
     enabled: !!id && !config.mock.groups,
     staleTime: 0,
     queryFn: async (): Promise<Conversation & { members: ChatMember[] }> => {
-      const r = await api.get<RawConversationRow & { members: { id: string; name: string; handle: string; avatar_path: string | null; role_title: string | null; role: string; followed: boolean }[] }>(`/web/messages/${id}`);
+      const r = await api.get<RawConversationRow & { members: { id: string; name: string; handle: string; avatar_path: string | null; role_title: string | null; role: string; followed: boolean; verified?: boolean; is_admin?: boolean }[] }>(`/web/messages/${id}`);
       return {
         ...toConversation(r),
-        members: (r.members ?? []).map((m) => ({ id: m.id, name: m.name, handle: m.handle, avatarPath: m.avatar_path, roleTitle: m.role_title, role: m.role, followed: Boolean(m.followed) })),
+        members: (r.members ?? []).map((m) => ({ id: m.id, name: m.name, handle: m.handle, avatarPath: m.avatar_path, roleTitle: m.role_title, role: m.role, followed: Boolean(m.followed), verified: Boolean(m.verified), admin: Boolean(m.is_admin) })),
       };
     },
   });

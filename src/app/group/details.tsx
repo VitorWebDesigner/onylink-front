@@ -6,6 +6,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Avatar } from '../../components/Avatar';
 import { BottomSheet, SheetHeader, SheetScrollView } from '../../components/BottomSheet';
 import { CountBadge } from '../../components/CountBadge';
+import { UserBadges } from '../../components/UserBadges';
 import { EmptyState } from '../../components/EmptyState';
 import { Icon, type IconName } from '../../components/Icon';
 import { MemberActionsSheet } from '../../components/community/MemberActionsSheet';
@@ -223,7 +224,8 @@ export default function CommunityDetails() {
                     <Avatar name={m.name} uri={m.avatarPath} size="md" />
                     <View className="flex-1">
                       <View className="flex-row items-center gap-2">
-                        <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{self ? 'Você' : m.name}</Text>
+                        <Text className="text-ink-900 font-semibold text-sm shrink" numberOfLines={1}>{self ? 'Você' : m.name}</Text>
+                        <UserBadges verified={m.verified} admin={m.admin} size={13} />
                         {m.role === 'ADMIN' ? (
                           <View className="rounded-pill px-2 py-0.5 bg-accent-50">
                             <Text className="text-brand-500 text-[10px] font-bold">{g.createdBy === m.id ? 'DONO' : 'ADMIN'}</Text>

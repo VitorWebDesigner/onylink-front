@@ -28,6 +28,8 @@ export interface UserProfile {
   contactUrl: string | null;
   createdAt: string | null;
   verified: boolean;
+  /** Role ADMIN do app (selo navy). */
+  admin: boolean;
   professional: boolean;
   /** Selos automáticos por regra (Conector = 50+ seguidores; Autoridade = 100+ insights). */
   badgeConnector: boolean;
@@ -42,6 +44,7 @@ interface RawUser {
   id: string;
   name: string;
   handle: string;
+  role?: string;
   avatar_path: string | null;
   cover_path: string | null;
   bio: string | null;
@@ -87,6 +90,7 @@ const toUser = (r: RawUser): UserProfile => ({
   contactUrl: r.contact_url ?? null,
   createdAt: r.created_at ?? null,
   verified: Boolean(r.verified),
+  admin: r.role === 'ADMIN',
   professional: Boolean(r.professional),
   badgeConnector: Boolean(r.badge_connector),
   badgeAuthority: Boolean(r.badge_authority),
@@ -225,6 +229,8 @@ export interface FollowListUser {
   avatarPath: string | null;
   roleTitle: string | null;
   followed: boolean;
+  verified?: boolean;
+  admin?: boolean;
 }
 
 /** Listas de rede (stats tocáveis): seguidores OU seguindo. */
@@ -234,8 +240,8 @@ export function useFollowsList(id: string, kind: 'followers' | 'following') {
     enabled: !!id && !config.mock.profile,
     staleTime: 0,
     queryFn: async (): Promise<FollowListUser[]> => {
-      const rows = await api.get<{ id: string; name: string; handle: string; avatar_path: string | null; role_title: string | null; followed: boolean }[]>(`/web/users/${id}/${kind}?limit=100&offset=0`);
-      return (rows ?? []).map((r) => ({ id: r.id, name: r.name, handle: r.handle, avatarPath: r.avatar_path, roleTitle: r.role_title, followed: Boolean(r.followed) }));
+      const rows = await api.get<{ id: string; name: string; handle: string; avatar_path: string | null; role_title: string | null; followed: boolean; verified?: boolean; is_admin?: boolean }[]>(`/web/users/${id}/${kind}?limit=100&offset=0`);
+      return (rows ?? []).map((r) => ({ id: r.id, name: r.name, handle: r.handle, avatarPath: r.avatar_path, roleTitle: r.role_title, followed: Boolean(r.followed), verified: Boolean(r.verified), admin: Boolean(r.is_admin) }));
     },
   });
 }

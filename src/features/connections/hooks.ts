@@ -11,6 +11,8 @@ export interface SuggestUser {
   roleTitle: string | null;
   segment: string | null;
   city: string | null;
+  verified?: boolean;
+  admin?: boolean;
 }
 interface RawSuggest {
   id: string;
@@ -20,10 +22,13 @@ interface RawSuggest {
   role_title: string | null;
   segment: string | null;
   city: string | null;
+  verified?: boolean;
+  is_admin?: boolean;
 }
 const toSuggest = (r: RawSuggest): SuggestUser => ({
   id: r.id, name: r.name, handle: r.handle, avatarPath: r.avatar_path,
   roleTitle: r.role_title, segment: r.segment, city: r.city,
+  verified: Boolean(r.verified), admin: Boolean(r.is_admin),
 });
 
 /** Pessoas com algo em comum com o usuário-semente (recém-seguido). */

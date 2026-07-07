@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Avatar } from '../Avatar';
 import { BottomSheet, SHEET_BG, sheetShadow } from '../BottomSheet';
 import { Icon, type IconName } from '../Icon';
+import { UserBadges } from '../UserBadges';
 import { useToast } from '../feedback/toast';
 import { colors } from '../../theme/colors';
 import { PRESSED_OPACITY } from '../../theme/tokens';
@@ -20,6 +21,8 @@ export interface MemberLike {
   roleTitle: string | null;
   role: string;
   followed: boolean;
+  verified?: boolean;
+  admin?: boolean;
 }
 /** Contexto de moderação — Group ou Conversation satisfazem estruturalmente. */
 export interface ModerationScope {
@@ -88,7 +91,8 @@ export function MemberActionsSheet({ member, group, onClose, onPromote, onTransf
               <Avatar name={m.name} uri={m.avatarPath} size="xxl" />
               <View className="items-center">
                 <View className="flex-row items-center gap-2">
-                  <Text className="text-ink-900 font-extrabold text-lg">{m.name}</Text>
+                  <Text className="text-ink-900 font-extrabold text-lg shrink" numberOfLines={1}>{m.name}</Text>
+                  <UserBadges verified={m.verified} admin={m.admin} size={15} />
                   {m.role === 'ADMIN' ? (
                     <View className="rounded-pill px-2 py-0.5 bg-accent-50">
                       <Text className="text-brand-500 text-[10px] font-bold">{targetIsOwner ? 'DONO' : 'ADMIN'}</Text>

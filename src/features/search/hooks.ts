@@ -11,6 +11,8 @@ export interface SearchUser {
   segment: string | null;
   city: string | null;
   followed: boolean;
+  verified?: boolean;
+  admin?: boolean;
 }
 interface RawSearchUser {
   id: string;
@@ -21,10 +23,13 @@ interface RawSearchUser {
   segment: string | null;
   city: string | null;
   followed: boolean;
+  verified?: boolean;
+  is_admin?: boolean;
 }
 const toSearchUser = (r: RawSearchUser): SearchUser => ({
   id: r.id, name: r.name, handle: r.handle, avatarPath: r.avatar_path,
   roleTitle: r.role_title, segment: r.segment, city: r.city, followed: r.followed,
+  verified: Boolean(r.verified), admin: Boolean(r.is_admin),
 });
 
 /** Busca usuários (nome/@/segmento/cidade). Backend: GET /web/users/search. */

@@ -18,6 +18,8 @@ import { useUser } from '../../features/users/hooks';
 import { useOpenDm } from '../../features/messages/hooks';
 import { useToast } from '../../components/feedback/toast';
 import { ReportSheet } from '../../components/moderation/ReportSheet';
+import { BottomSheet } from '../../components/BottomSheet';
+import { Share } from 'react-native';
 
 /** Perfil PÚBLICO: perfil rico + Seguir/Contato + sugestões (só APÓS seguir) + abas. */
 export default function UserProfileScreen() {
@@ -29,6 +31,7 @@ export default function UserProfileScreen() {
   const openDm = useOpenDm();
   const toast = useToast();
   const [contactOpen, setContactOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [follows, setFollows] = useState<FollowsKind | null>(null);
   const [tab, setTab] = useState<ProfileTab>('posts');
@@ -92,9 +95,9 @@ export default function UserProfileScreen() {
           <Icon name="back" size={24} color={colors.ink[900]} />
         </Pressable>
         <Text className="text-ink-900 font-semibold text-base flex-1">{u ? `@${u.handle}` : 'Perfil'}</Text>
-        {/* denunciar o perfil (só perfil de terceiros) */}
+        {/* menu do perfil (compartilhar · denunciar) — 3-pontos NÃO é denúncia direta */}
         {u && !isMe ? (
-          <Pressable onPress={() => setReportOpen(true)} hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })} className="w-8 h-8 rounded-full border border-surface-border items-center justify-center">
+          <Pressable onPress={() => setMenuOpen(true)} hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })} className="w-8 h-8 rounded-full border border-surface-border items-center justify-center">
             <Icon name="more" size={16} color={colors.ink[900]} />
           </Pressable>
         ) : null}
@@ -124,6 +127,31 @@ export default function UserProfileScreen() {
           />
           <ContactSheet visible={contactOpen} onClose={() => setContactOpen(false)} p={u} />
           <FollowsSheet userId={u.id} initialKind={follows ?? 'followers'} visible={!!follows} onClose={() => setFollows(null)} />
+          {/* menu → ações do perfil; Denunciar abre o sheet de motivos EM SEQUÊNCIA (§13) */}
+          <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)}>
+            <View className="pb-2">
+              <Pressable
+                onPress={() => {
+                  setMenuOpen(false);
+                  void Share.share({ message: `Conheça ${u.name} (@${u.handle}) no OnyLink — networking que gera negócio.` });
+                }}
+                style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
+                className="flex-row items-center gap-3 px-4 py-4 border-b border-surface-border"
+              >
+                <Icon name="send" set="light" size={20} color={colors.ink[700]} />
+                <Text className="text-ink-900 text-[15px]">Compartilhar perfil</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => { setMenuOpen(false); setTimeout(() => setReportOpen(true), 250); }}
+                style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
+                className="flex-row items-center gap-3 px-4 py-4 border-b border-surface-border"
+              >
+                <Icon name="error" set="light" size={20} color={colors.danger} />
+                <Text className="text-danger font-semibold text-[15px]">Denunciar</Text>
+              </Pressable>
+            </View>
+          </BottomSheet>
+
           <ReportSheet visible={reportOpen} targetType="USER" targetId={u.id} onClose={() => setReportOpen(false)} />
         </>
       )}

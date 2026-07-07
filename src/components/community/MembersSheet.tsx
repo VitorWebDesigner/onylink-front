@@ -4,6 +4,7 @@ import { Avatar } from '../Avatar';
 import { BottomSheet, SheetHeader, SheetScrollView } from '../BottomSheet';
 import { Button } from '../Button';
 import { Icon } from '../Icon';
+import { UserBadges } from '../UserBadges';
 import { colors } from '../../theme/colors';
 import { PRESSED_OPACITY } from '../../theme/tokens';
 import { useAuth } from '../../store/auth';
@@ -55,7 +56,8 @@ export function MembersSheet({ groupId, mode, visible, onClose, onSelectMember }
                     <Avatar name={m.name} uri={m.avatarPath} size="md" />
                     <View className="flex-1">
                       <View className="flex-row items-center gap-2">
-                        <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{m.id === me?.id ? 'Você' : m.name}</Text>
+                        <Text className="text-ink-900 font-semibold text-sm shrink" numberOfLines={1}>{m.id === me?.id ? 'Você' : m.name}</Text>
+                        <UserBadges verified={m.verified} admin={m.admin} size={13} />
                         {m.role === 'ADMIN' ? (
                           <View className="rounded-pill px-2 py-0.5 bg-accent-50">
                             <Text className="text-brand-500 text-[10px] font-bold">ADMIN</Text>

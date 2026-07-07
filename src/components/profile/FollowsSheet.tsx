@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Avatar } from '../Avatar';
 import { BottomSheet, SheetScrollView } from '../BottomSheet';
+import { UserBadges } from '../UserBadges';
 import { colors } from '../../theme/colors';
 import { PRESSED_OPACITY } from '../../theme/tokens';
 import { useAuth } from '../../store/auth';
@@ -97,7 +98,10 @@ export function FollowsSheet({ userId, initialKind, visible, onClose }: {
                 >
                   <Avatar name={u.name} uri={u.avatarPath} size="md" />
                   <View className="flex-1">
-                    <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{u.name}</Text>
+                    <View className="flex-row items-center gap-1.5">
+                      <Text className="text-ink-900 font-semibold text-sm shrink" numberOfLines={1}>{u.name}</Text>
+                      <UserBadges verified={u.verified} admin={u.admin} size={13} />
+                    </View>
                     <Text className="text-ink-400 text-[13px]" numberOfLines={1}>@{u.handle}{u.roleTitle ? ` · ${u.roleTitle}` : ''}</Text>
                   </View>
                   {u.id !== me?.id ? <FollowBtn followed={followed} onPress={() => toggle(u)} /> : null}

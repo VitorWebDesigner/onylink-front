@@ -4,6 +4,7 @@ import { Icon } from './Icon';
 import { AnimatedReaction } from './AnimatedReaction';
 import { MediaCarousel } from './MediaCarousel';
 import { HashtagText } from './HashtagText';
+import { UserBadges } from './UserBadges';
 import { useMediaViewer } from './media/MediaViewerProvider';
 import { useReactionPicker } from './reactions/ReactionPickerProvider';
 import { useMediaUi } from '../store/mediaUi';
@@ -140,7 +141,10 @@ export function PostCard({ post, onToggleInsight, onToggleLike, onToggleRepost, 
             <Avatar name={post.authorName} uri={post.authorAvatar} size="md" />
           </Pressable>
           <Pressable onPress={openAuthor ? () => openAuthor(post) : undefined} hitSlop={6} className="flex-1" style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
-            <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{post.authorName}</Text>
+            <View className="flex-row items-center gap-1.5">
+              <Text className="text-ink-900 font-semibold text-sm shrink" numberOfLines={1}>{post.authorName}</Text>
+              <UserBadges verified={post.authorVerified} admin={post.authorAdmin} size={13} />
+            </View>
             <Text className="text-ink-400 text-[13px]">{timeAgo(post.createdAt)}</Text>
           </Pressable>
           {showFollow ? <FollowPill followed={post.authorFollowed} onPress={() => onToggleFollow!(post)} /> : null}
@@ -197,6 +201,7 @@ export function PostCard({ post, onToggleInsight, onToggleLike, onToggleRepost, 
               <Pressable onPress={openAuthor ? () => openAuthor(post) : undefined} hitSlop={6} className="shrink" style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
                 <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{post.authorName}</Text>
               </Pressable>
+              <UserBadges verified={post.authorVerified} admin={post.authorAdmin} size={13} />
               <Text className="text-ink-400 text-[13px]">· {timeAgo(post.createdAt)}</Text>
               <View className="flex-1" />
               {/* botão Seguir ocupa o antigo lugar da tag */}
@@ -227,8 +232,9 @@ export function PostCard({ post, onToggleInsight, onToggleLike, onToggleRepost, 
           </View>
 
           <Pressable onPress={onOpen ? () => onOpen(post) : undefined} style={({ pressed }) => ({ opacity: pressed && onOpen ? 0.96 : 1 })} className="flex-1">
-            <Pressable onPress={onOpenUser && tc.authorId ? () => onOpenUser(tc.authorId!) : undefined} hitSlop={6} className="self-start" style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
+            <Pressable onPress={onOpenUser && tc.authorId ? () => onOpenUser(tc.authorId!) : undefined} hitSlop={6} className="self-start flex-row items-center gap-1.5" style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
               <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{tc.authorName}</Text>
+              <UserBadges verified={tc.authorVerified} admin={tc.authorAdmin} size={12} />
             </Pressable>
             <Text className="text-ink-700 leading-5 mt-0.5">{tc.content}</Text>
             <View className="flex-row items-center gap-6 pt-1.5">

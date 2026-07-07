@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Avatar } from '../Avatar';
 import { Button } from '../Button';
+import { UserBadges } from '../UserBadges';
 import { PRESSED_OPACITY } from '../../theme/tokens';
 import { useFollowSuggestions, useFollowUser } from '../../features/connections/hooks';
 
@@ -35,7 +36,10 @@ export function SuggestionsRow({ seedId, excludeId }: { seedId: string; excludeI
               >
                 <Avatar name={s.name} uri={s.avatarPath} size="xxl" />
                 <View className="items-center">
-                  <Text className="text-ink-900 font-semibold text-[13px]" numberOfLines={1}>{s.name}</Text>
+                  <View className="flex-row items-center gap-1">
+                    <Text className="text-ink-900 font-semibold text-[13px] shrink" numberOfLines={1}>{s.name}</Text>
+                    <UserBadges verified={s.verified} admin={s.admin} size={12} />
+                  </View>
                   <Text className="text-ink-400 text-xs" numberOfLines={1}>@{s.handle}</Text>
                 </View>
               </Pressable>

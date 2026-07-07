@@ -31,6 +31,8 @@ export interface ChatMember {
   roleTitle: string | null;
   role: string; // ADMIN | MEMBER
   followed: boolean;
+  verified?: boolean;
+  admin?: boolean; // selo de ADMIN do APP
 }
 
 export interface ChatMessage {
@@ -39,6 +41,8 @@ export interface ChatMessage {
   senderId: string;
   senderName: string;
   senderAvatar: string | null;
+  senderVerified?: boolean;
+  senderAdmin?: boolean;
   content: string;
   createdAt: string;
   /** Só no otimista local (enviando…). */

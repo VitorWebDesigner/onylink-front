@@ -14,6 +14,8 @@ interface RawCommentRow {
   author_id: string;
   author_name: string;
   author_avatar: string | null;
+  author_verified?: boolean;
+  author_admin?: boolean;
   parent_id: string | null;
   like_count: number;
   insight_count: number;
@@ -33,6 +35,8 @@ const toComment = (postId: string, r: RawCommentRow): Comment => ({
   authorName: r.author_name,
   authorAvatar: r.author_avatar ?? null,
   authorRoleTitle: null,
+  authorVerified: Boolean(r.author_verified),
+  authorAdmin: Boolean(r.author_admin),
   content: r.content,
   createdAt: r.created_at,
   parentId: r.parent_id ?? null,

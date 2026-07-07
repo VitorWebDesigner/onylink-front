@@ -39,6 +39,8 @@ export interface GroupMember {
   roleTitle: string | null;
   role: string; // ADMIN | MEMBER
   followed: boolean;
+  verified?: boolean;
+  admin?: boolean; // selo de ADMIN do APP (não da comunidade)
 }
 
 export interface JoinRequest {

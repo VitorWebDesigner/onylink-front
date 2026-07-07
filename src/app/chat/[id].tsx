@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Avatar } from '../../components/Avatar';
 import { Icon } from '../../components/Icon';
+import { UserBadges } from '../../components/UserBadges';
 import { colors } from '../../theme/colors';
 import { HIT_SLOP, PRESSED_OPACITY } from '../../theme/tokens';
 import { useKeyboardPadding } from '../../lib/keyboard';
@@ -25,8 +26,13 @@ function Bubble({ m, mine, isGroup, othersReadAt }: { m: ChatMessage; mine: bool
         className={['rounded-2xl px-3.5 py-2.5 max-w-[80%]', mine ? 'bg-brand-500 rounded-br-md' : 'bg-surface-muted rounded-bl-md'].join(' ')}
         style={m.pending ? { opacity: 0.55 } : undefined}
       >
-        {/* em grupo, mensagens dos outros mostram quem falou */}
-        {isGroup && !mine ? <Text className="text-brand-500 text-[11px] font-bold mb-0.5">{m.senderName}</Text> : null}
+        {/* em grupo, mensagens dos outros mostram quem falou (+ selos) */}
+        {isGroup && !mine ? (
+          <View className="flex-row items-center gap-1 mb-0.5">
+            <Text className="text-brand-500 text-[11px] font-bold shrink" numberOfLines={1}>{m.senderName}</Text>
+            <UserBadges verified={m.senderVerified} admin={m.senderAdmin} size={11} />
+          </View>
+        ) : null}
         <Text className={mine ? 'text-white leading-5' : 'text-ink-900 leading-5'}>{m.content}</Text>
         <View className="flex-row items-center justify-end gap-1 mt-0.5">
           <Text className={['text-[10px]', mine ? 'text-white/60' : 'text-ink-400'].join(' ')}>{fmtTime(m.createdAt)}</Text>

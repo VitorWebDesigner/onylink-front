@@ -103,7 +103,9 @@ export function ProfileHeader({ p, actions, onPressFollowers, onPressFollowing }
 
         <View className="gap-0.5 pt-2">
           <View className="flex-row items-center gap-1.5">
-            <Text className="text-ink-900 font-extrabold text-[22px]" numberOfLines={1}>{p.name}</Text>
+            <Text className="text-ink-900 font-extrabold text-[22px] shrink" numberOfLines={1}>{p.name}</Text>
+            {/* selo de ADMIN do app (navy) antes do verificado (lime) */}
+            {p.admin ? <Icon name="verified" set="bold" size={19} color={colors.brand[500]} /> : null}
             {p.verified ? (
               <Pressable onPress={() => setSeloOpen(true)} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}>
                 <Icon name="verified" set="bold" size={19} color={colors.accent[500]} />
