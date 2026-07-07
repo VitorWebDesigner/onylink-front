@@ -3,8 +3,9 @@ import Constants from 'expo-constants';
 type Extra = { apiUrl?: string; transportSecret?: string };
 const extra = (Constants.expoConfig?.extra ?? {}) as Extra;
 
-// Backend de PRODUÇÃO (servidor). Builds de loja (APK/IPA) usam este.
-const PROD_API_URL = 'http://212.85.2.32:4128';
+// Backend de PRODUÇÃO (domínio oficial, HTTPS — exigido pelas lojas).
+// Deploy automático: push na master de github.com/Go-X-Tech/onylink-back.
+const PROD_API_URL = 'https://onylink-back.goxtechub.com';
 // Porta do backend rodando LOCAL na sua máquina (npm run dev).
 const LOCAL_API_PORT = 4444;
 
