@@ -1,10 +1,15 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../components/Button';
+import { Icon, type IconName } from '../../components/Icon';
+import { ScoreRing } from '../../components/ScoreRing';
+import { TextLink } from '../../components/TextLink';
 import { useToast } from '../../components/feedback/toast';
-import { useSubmitDiagnostic } from '../../features/diagnostic/hooks';
+import { colors } from '../../theme/colors';
+import { HIT_SLOP, PRESSED_OPACITY } from '../../theme/tokens';
+import { useLatestDiagnostic, useSubmitDiagnostic } from '../../features/diagnostic/hooks';
 import {
   AREA_LABEL,
   QUESTIONS,
@@ -14,6 +19,16 @@ import {
 } from '../../features/diagnostic/types';
 
 const SCALE = [0, 1, 2, 3, 4, 5];
+const AREAS: DiagnosticArea[] = ['financeiro', 'comercial', 'marketing', 'gestao'];
+const AREA_ICON: Record<DiagnosticArea, IconName> = {
+  financeiro: 'wallet', comercial: 'bag', marketing: 'chart', gestao: 'document',
+};
+const AREA_INTRO: Record<DiagnosticArea, string> = {
+  financeiro: 'Caixa, margem e organização do dinheiro.',
+  comercial: 'Processo de vendas, funil e metas.',
+  marketing: 'Posicionamento, aquisição e métricas.',
+  gestao: 'Indicadores, delegação e time.',
+};
 
 /** Seletor Likert 0..5 para uma pergunta. */
 function Scale({ value, onChange }: { value: number | null; onChange: (v: number) => void }) {
@@ -25,8 +40,9 @@ function Scale({ value, onChange }: { value: number | null; onChange: (v: number
           <Pressable
             key={n}
             onPress={() => onChange(n)}
+            style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
             className={[
-              'flex-1 h-10 rounded-card items-center justify-center border',
+              'flex-1 h-11 rounded-card items-center justify-center border',
               active ? 'bg-brand-500 border-brand-500' : 'bg-surface-muted border-surface-border',
             ].join(' ')}
           >
@@ -38,111 +54,174 @@ function Scale({ value, onChange }: { value: number | null; onChange: (v: number
   );
 }
 
-/** Barra de score 0..100 por área. */
-function ScoreBar({ area, score }: { area: DiagnosticArea; score: number }) {
-  const tone = score >= 60 ? 'bg-accent-500' : score >= 40 ? 'bg-accent-300' : 'bg-danger';
-  return (
-    <View className="gap-1">
-      <View className="flex-row justify-between">
-        <Text className="text-ink-700 font-medium">{AREA_LABEL[area]}</Text>
-        <Text className="text-ink-500">{score}/100</Text>
-      </View>
-      <View className="h-2 rounded-full bg-surface-muted overflow-hidden">
-        <View className={`h-2 rounded-full ${tone}`} style={{ width: `${Math.max(score, 3)}%` }} />
-      </View>
-    </View>
-  );
-}
-
+/**
+ * Diagnóstico de Maturidade — porta de aquisição (CLAUDE.md §8).
+ * WIZARD por área (4 passos, 3 perguntas cada, progresso no topo) → resultado
+ * com ANÉIS (mesmo ScoreRing do Painel) + recomendações com CTA pra comunidade.
+ * Vindo das Configurações com resultado anterior: mostra o salvo + "Refazer".
+ */
 export default function Diagnostic() {
   const router = useRouter();
   const toast = useToast();
+  const { redo } = useLocalSearchParams<{ redo?: string }>();
   const submit = useSubmitDiagnostic();
+  const { data: latest, isLoading: loadingLatest } = useLatestDiagnostic();
+
+  const [step, setStep] = useState(0); // 0..3 = áreas
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [result, setResult] = useState<DiagnosticResult | null>(null);
+  const [redoing, setRedoing] = useState(redo === '1');
 
-  const allAnswered = useMemo(
-    () => QUESTIONS.every((_, i) => answers[i] !== undefined),
-    [answers],
+  const area = AREAS[step]!;
+  const areaQuestions = useMemo(
+    () => QUESTIONS.map((q, i) => ({ ...q, index: i })).filter((q) => q.area === area),
+    [area],
   );
-
-  function setAnswer(index: number, value: number) {
-    setAnswers((prev) => ({ ...prev, [index]: value }));
-  }
+  const stepDone = areaQuestions.every((q) => answers[q.index] !== undefined);
+  const progress = (Object.keys(answers).length / QUESTIONS.length) * 100;
 
   async function onSubmit() {
-    // Agrupa respostas por área no formato que o backend espera.
     const grouped: DiagnosticAnswers = { financeiro: [], comercial: [], marketing: [], gestao: [] };
     QUESTIONS.forEach((q, i) => grouped[q.area].push(answers[i] ?? 0));
     try {
       const res = await submit.mutateAsync(grouped);
       setResult(res);
+      setRedoing(false);
     } catch {
       toast.error('Não foi possível enviar o diagnóstico. Tente novamente.');
     }
   }
 
-  // ----- Tela de resultado -----
-  if (result) {
-    const areas = Object.keys(result.scores) as DiagnosticArea[];
+  function restart() {
+    setAnswers({});
+    setStep(0);
+    setResult(null);
+    setRedoing(true);
+  }
+
+  // ───── Resultado (recém-enviado OU salvo, vindo das Configurações) ─────
+  const shown = result ?? (!redoing && latest ? latest : null);
+  if (shown) {
+    const cameFromApp = router.canGoBack(); // Configurações → tem voltar; onboarding → não
     return (
       <SafeAreaView className="flex-1 bg-surface" edges={['top', 'bottom']}>
-        <ScrollView contentContainerClassName="px-5 py-6 gap-6">
-          <View className="gap-1">
+        <ScrollView contentContainerClassName="px-5 py-6 gap-7">
+          {cameFromApp ? (
+            <Pressable onPress={() => router.back()} hitSlop={HIT_SLOP} className="self-start">
+              <Icon name="back" size={24} color={colors.ink[900]} />
+            </Pressable>
+          ) : null}
+
+          {/* anel-herói do total */}
+          <View className="items-center gap-2 pt-2">
             <Text className="text-ink-500">Maturidade da sua empresa</Text>
-            <Text className="text-5xl font-extrabold text-brand-600">{result.total}<Text className="text-2xl text-ink-400">/100</Text></Text>
+            <ScoreRing value={shown.total} size={148} />
+            <Text className="text-ink-400 text-xs">
+              {shown.total >= 75 ? 'Empresa madura — hora de escalar' : shown.total >= 50 ? 'No caminho — há espaço claro pra crescer' : 'Começo de jornada — foque no essencial primeiro'}
+            </Text>
           </View>
 
-          <View className="gap-4">
-            {areas.map((area) => (
-              <ScoreBar key={area} area={area} score={result.scores[area]} />
+          {/* 4 anéis por área */}
+          <View className="flex-row">
+            {AREAS.map((a) => (
+              <ScoreRing key={a} label={AREA_LABEL[a]} value={shown.scores[a]} />
             ))}
           </View>
 
-          {result.recommendations.length > 0 ? (
-            <View className="gap-3">
-              <Text className="text-ink-900 font-semibold text-lg">Onde focar primeiro</Text>
-              {result.recommendations.map((r) => (
-                <View key={r.area} className="py-4 border-b border-surface-border gap-1">
-                  <Text className="text-brand-500 font-semibold">{AREA_LABEL[r.area]}</Text>
+          {shown.recommendations.length > 0 ? (
+            <View className="gap-1">
+              <Text className="text-ink-900 font-semibold text-lg pb-1">Onde focar primeiro</Text>
+              {shown.recommendations.map((r) => (
+                <View key={r.area} className="py-4 border-b border-surface-border gap-2">
+                  <View className="flex-row items-center gap-2">
+                    <Icon name={AREA_ICON[r.area]} set="light" size={18} color={colors.brand[500]} />
+                    <Text className="text-brand-500 font-semibold">{AREA_LABEL[r.area]}</Text>
+                    <Text className="text-ink-400 text-xs">· {r.score}/100</Text>
+                  </View>
                   <Text className="text-ink-700 leading-5">{r.message}</Text>
+                  {/* comunidade recomendada pra área fraca (slug do seed) */}
+                  <TextLink onPress={() => router.push({ pathname: '/group/[id]', params: { id: r.groupSlug } })}>
+                    Ver comunidade recomendada →
+                  </TextLink>
                 </View>
               ))}
             </View>
           ) : (
             <View className="py-4 border-b border-surface-border">
-              <Text className="text-ink-700 leading-5">Parabéns! Sua empresa mostra boa maturidade em todas as áreas.</Text>
+              <Text className="text-ink-700 leading-5">
+                Parabéns! Sua empresa mostra boa maturidade em todas as áreas — use a comunidade pra ir além.
+              </Text>
             </View>
           )}
 
-          <Button title="Entrar na comunidade" onPress={() => router.replace('/(tabs)/feed')} />
+          {cameFromApp ? (
+            <Button title="Refazer diagnóstico" variant="accent" onPress={restart} />
+          ) : (
+            <View className="gap-3">
+              <Button title="Entrar na comunidade" variant="accent" onPress={() => router.replace('/(tabs)/feed')} />
+              <View className="items-center">
+                <TextLink onPress={restart} tone="muted">Refazer diagnóstico</TextLink>
+              </View>
+            </View>
+          )}
         </ScrollView>
       </SafeAreaView>
     );
   }
 
-  // ----- Questionário -----
+  if (loadingLatest && !redoing) {
+    return (
+      <SafeAreaView className="flex-1 bg-surface items-center justify-center" edges={['top', 'bottom']}>
+        <ActivityIndicator color={colors.brand[500]} />
+      </SafeAreaView>
+    );
+  }
+
+  // ───── Wizard (4 passos, um por área) ─────
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top', 'bottom']}>
-      <ScrollView contentContainerClassName="px-5 py-6 gap-6">
-        <View className="gap-1">
-          <Text className="text-2xl font-extrabold text-ink-900">Diagnóstico empresarial</Text>
-          <Text className="text-ink-500">0 = discordo totalmente · 5 = concordo totalmente</Text>
+      {/* topo: voltar (passo ou tela) + barra de progresso */}
+      <View className="px-5 pt-3 gap-3">
+        <View className="flex-row items-center gap-3">
+          {step > 0 || router.canGoBack() ? (
+            <Pressable onPress={() => (step > 0 ? setStep(step - 1) : router.back())} hitSlop={HIT_SLOP}>
+              <Icon name="back" size={24} color={colors.ink[900]} />
+            </Pressable>
+          ) : null}
+          <Text className="text-ink-400 text-xs font-semibold flex-1 text-right">Passo {step + 1} de {AREAS.length}</Text>
+        </View>
+        <View className="h-1.5 rounded-full bg-surface-muted overflow-hidden">
+          <View className="h-1.5 rounded-full bg-accent-500" style={{ width: `${Math.max(progress, 4)}%` }} />
+        </View>
+      </View>
+
+      <ScrollView contentContainerClassName="px-5 py-6 gap-6" keyboardShouldPersistTaps="handled">
+        <View className="gap-1.5">
+          <View className="flex-row items-center gap-2.5">
+            <View className="w-11 h-11 rounded-full bg-accent-50 items-center justify-center">
+              <Icon name={AREA_ICON[area]} set="light" size={22} color={colors.brand[500]} />
+            </View>
+            <View className="flex-1">
+              <Text className="text-2xl font-extrabold text-ink-900">{AREA_LABEL[area]}</Text>
+              <Text className="text-ink-500 text-[13px]">{AREA_INTRO[area]}</Text>
+            </View>
+          </View>
+          <Text className="text-ink-400 text-xs pt-1">0 = discordo totalmente · 5 = concordo totalmente</Text>
         </View>
 
-        {QUESTIONS.map((q, i) => (
-          <View key={i} className="gap-2">
-            <Text className="text-ink-400 text-xs uppercase tracking-wide">{AREA_LABEL[q.area]}</Text>
-            <Text className="text-ink-900 leading-5">{q.text}</Text>
-            <Scale value={answers[i] ?? null} onChange={(v) => setAnswer(i, v)} />
+        {areaQuestions.map((q) => (
+          <View key={q.index} className="gap-2.5">
+            <Text className="text-ink-900 leading-5 font-medium">{q.text}</Text>
+            <Scale value={answers[q.index] ?? null} onChange={(v) => setAnswers((p) => ({ ...p, [q.index]: v }))} />
           </View>
         ))}
 
         <Button
-          title={allAnswered ? 'Ver meu resultado' : 'Responda todas as perguntas'}
-          onPress={onSubmit}
-          disabled={!allAnswered}
+          title={step < AREAS.length - 1 ? 'Continuar' : 'Ver meu resultado'}
+          variant="accent"
+          disabled={!stepDone}
           loading={submit.isPending}
+          onPress={() => (step < AREAS.length - 1 ? setStep(step + 1) : void onSubmit())}
         />
       </ScrollView>
     </SafeAreaView>

@@ -16,6 +16,7 @@ export { Card } from './Card';
 export { Badge } from './Badge';
 export { ListRow } from './ListRow';
 export { SectionHeader } from './SectionHeader';
+export { ScoreRing } from './ScoreRing';
 export { PostCard } from './PostCard';
 export { OpportunityCard } from './OpportunityCard';
 export { MediaCarousel } from './MediaCarousel';

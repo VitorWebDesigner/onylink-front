@@ -1,10 +1,10 @@
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import Svg, { Circle } from 'react-native-svg';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../components/Button';
 import { Icon } from '../../components/Icon';
+import { ScoreRing } from '../../components/ScoreRing';
 import { colors } from '../../theme/colors';
 import { HIT_SLOP, PRESSED_OPACITY } from '../../theme/tokens';
 import { compactNumber } from '../../lib/format';
@@ -32,39 +32,8 @@ function Metric({ value, label, now, prev }: { value: number; label: string; now
   );
 }
 
-/** Anel de nota 0–100 (pedido do dono: círculos, não barras — 4 lado a lado). */
-function ScoreRing({ label, value }: { label: string; value: number | null }) {
-  const size = 68;
-  const sw = 6;
-  const r = (size - sw) / 2;
-  const c = 2 * Math.PI * r;
-  const v = Math.max(0, Math.min(100, value ?? 0));
-  return (
-    <View className="items-center gap-1.5 flex-1">
-      <View style={{ width: size, height: size }}>
-        <Svg width={size} height={size}>
-          <Circle cx={size / 2} cy={size / 2} r={r} stroke={colors.surface.border} strokeWidth={sw} fill="none" />
-          <Circle
-            cx={size / 2}
-            cy={size / 2}
-            r={r}
-            stroke={colors.accent[500]}
-            strokeWidth={sw}
-            fill="none"
-            strokeLinecap="round"
-            strokeDasharray={`${c}`}
-            strokeDashoffset={c * (1 - v / 100)}
-            transform={`rotate(-90 ${size / 2} ${size / 2})`}
-          />
-        </Svg>
-        <View className="absolute inset-0 items-center justify-center">
-          <Text className="text-ink-900 font-extrabold text-base">{value ?? '—'}</Text>
-        </View>
-      </View>
-      <Text className="text-ink-500 text-xs">{label}</Text>
-    </View>
-  );
-}
+// Anel de nota virou componente COMPARTILHADO (components/ScoreRing) — o
+// resultado do Diagnóstico usa o mesmo (§13: nunca recriar primitiva).
 
 /**
  * Painel do Empresário (plano-perfil.md Fase 2) — métricas de NEGÓCIO dos últimos
