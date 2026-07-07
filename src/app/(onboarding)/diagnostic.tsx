@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
 import { Icon, type IconName } from '../../components/Icon';
 import { ScoreRing } from '../../components/ScoreRing';
@@ -132,17 +133,56 @@ export default function Diagnostic() {
             <View className="gap-1">
               <Text className="text-ink-900 font-semibold text-lg pb-1">Onde focar primeiro</Text>
               {shown.recommendations.map((r) => (
-                <View key={r.area} className="py-4 border-b border-surface-border gap-2">
+                <View key={r.area} className="py-4 border-b border-surface-border gap-2.5">
                   <View className="flex-row items-center gap-2">
                     <Icon name={AREA_ICON[r.area]} set="light" size={18} color={colors.brand[500]} />
                     <Text className="text-brand-500 font-semibold">{AREA_LABEL[r.area]}</Text>
                     <Text className="text-ink-400 text-xs">· {r.score}/100</Text>
                   </View>
                   <Text className="text-ink-700 leading-5">{r.message}</Text>
-                  {/* comunidade recomendada pra área fraca (slug do seed) */}
-                  <TextLink onPress={() => router.push({ pathname: '/group/[id]', params: { id: r.groupSlug } })}>
-                    Ver comunidade recomendada →
-                  </TextLink>
+
+                  {/* comunidades que casam com a área (recomendador dinâmico) */}
+                  {(r.groups ?? []).map((g) => (
+                    <Pressable
+                      key={g.id}
+                      onPress={() => router.push({ pathname: '/group/[id]', params: { id: g.slug } })}
+                      style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
+                      className="flex-row items-center gap-2.5"
+                    >
+                      <View className="w-9 h-9 rounded-full bg-accent-50 items-center justify-center">
+                        <Icon name="groups" set="light" size={18} color={colors.brand[500]} />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{g.name}</Text>
+                        <Text className="text-ink-400 text-xs">{g.memberCount.toLocaleString('pt-BR')} membros · comunidade</Text>
+                      </View>
+                      <Icon name="forward" set="light" size={16} color={colors.ink[400]} />
+                    </Pressable>
+                  ))}
+
+                  {/* pessoas fortes na área (insights recebidos) pra seguir */}
+                  {(r.people ?? []).map((p) => (
+                    <Pressable
+                      key={p.id}
+                      onPress={() => router.push({ pathname: '/user/[id]', params: { id: p.id } })}
+                      style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
+                      className="flex-row items-center gap-2.5"
+                    >
+                      <Avatar name={p.name} uri={p.avatarPath} size="sm" />
+                      <View className="flex-1">
+                        <Text className="text-ink-900 font-semibold text-sm" numberOfLines={1}>{p.name}</Text>
+                        <Text className="text-ink-400 text-xs" numberOfLines={1}>@{p.handle}{p.roleTitle ? ` · ${p.roleTitle}` : ''} · referência na área</Text>
+                      </View>
+                      <Icon name="forward" set="light" size={16} color={colors.ink[400]} />
+                    </Pressable>
+                  ))}
+
+                  {/* histórico salvo ANTES do recomendador dinâmico: só o slug */}
+                  {!r.groups?.length && !r.people?.length && r.groupSlug ? (
+                    <TextLink onPress={() => router.push({ pathname: '/group/[id]', params: { id: r.groupSlug! } })}>
+                      Ver comunidade recomendada →
+                    </TextLink>
+                  ) : null}
                 </View>
               ))}
             </View>

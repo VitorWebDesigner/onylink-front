@@ -55,7 +55,9 @@ export function useLatestDiagnostic() {
         },
         total: r.score_total ?? 0,
         recommendations,
-        recommendedGroups: [...new Set(recommendations.map((x) => x.groupSlug))],
+        recommendedGroups: [...new Set(recommendations.flatMap((x) =>
+          x.groups?.length ? x.groups.map((g) => g.slug) : x.groupSlug ? [x.groupSlug] : [],
+        ))],
         createdAt: r.created_at,
       };
     },

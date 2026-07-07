@@ -32,11 +32,29 @@ export const QUESTIONS: DiagnosticQuestion[] = [
   { area: 'gestao', text: 'Minha equipe tem papéis e responsabilidades claros.' },
 ];
 
+export interface RecommendedGroup {
+  id: string;
+  name: string;
+  slug: string;
+  memberCount: number;
+}
+
+export interface RecommendedPerson {
+  id: string;
+  name: string;
+  handle: string;
+  avatarPath: string | null;
+  roleTitle: string | null;
+}
+
 export interface DiagnosticRecommendation {
   area: DiagnosticArea;
   score: number;
   message: string;
-  groupSlug: string;
+  /** Recomendador dinâmico (07/2026). Históricos antigos só têm groupSlug. */
+  groups?: RecommendedGroup[];
+  people?: RecommendedPerson[];
+  groupSlug?: string | null;
 }
 
 export interface DiagnosticResult {
