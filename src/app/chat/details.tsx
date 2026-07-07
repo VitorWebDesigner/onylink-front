@@ -193,7 +193,10 @@ export default function ChatDetails() {
               icon="bookmark"
               label={conv.pinned ? 'Fixado' : 'Fixar'}
               active={conv.pinned}
-              onPress={() => togglePin.mutate({ id: conv.id, pinned: conv.pinned }, { onError: (e) => toast.error(e instanceof Error ? e.message : 'Não foi possível fixar.') })}
+              onPress={() => togglePin.mutate({ id: conv.id, pinned: conv.pinned }, {
+                onSuccess: () => toast.success(conv.pinned ? 'Desafixado.' : 'Fixado.'),
+                onError: (e) => toast.error(e instanceof Error ? e.message : 'Não foi possível fixar.'),
+              })}
             />
             {conv.isGroup && isAdmin ? (
               <ActionSquare icon="plus" label="Adicionar" onPress={() => setAddOpen(true)} />

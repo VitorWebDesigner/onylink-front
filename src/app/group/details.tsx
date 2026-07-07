@@ -187,7 +187,10 @@ export default function CommunityDetails() {
                 icon="bookmark"
                 label={g.pinned ? 'Fixada' : 'Fixar'}
                 active={g.pinned}
-                onPress={() => togglePin.mutate({ id: g.id, pinned: g.pinned }, { onError: (e) => toast.error(e instanceof Error ? e.message : 'Não foi possível fixar.') })}
+                onPress={() => togglePin.mutate({ id: g.id, pinned: g.pinned }, {
+                  onSuccess: () => toast.success(g.pinned ? 'Comunidade desafixada.' : 'Comunidade fixada.'),
+                  onError: (e) => toast.error(e instanceof Error ? e.message : 'Não foi possível fixar.'),
+                })}
               />
               {isAdmin ? <ActionSquare icon="edit" label="Editar" onPress={() => router.push({ pathname: '/group/edit', params: { id: g.id } })} /> : null}
             </View>

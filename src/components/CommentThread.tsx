@@ -62,9 +62,12 @@ function CommentBody({ c, onToggleLike, onToggleInsight, onToggleRepost, onToggl
         <UserBadges verified={c.authorVerified} admin={c.authorAdmin} size={13} />
         <Text className="text-ink-400 text-micro">{timeAgo(c.createdAt)}</Text>
         <View className="flex-1" />
-        <Pressable onPress={onMenu ? () => onMenu(c) : undefined} hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })} className="w-6 h-6 rounded-full border border-surface-border items-center justify-center">
-          <Icon name="more" size={13} color={colors.ink[400]} />
-        </Pressable>
+        {/* 3-pontos SÓ quando há menu (telas sem denúncia/exclusão escondem) */}
+        {onMenu ? (
+          <Pressable onPress={() => onMenu(c)} hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })} className="w-6 h-6 rounded-full border border-surface-border items-center justify-center">
+            <Icon name="more" size={13} color={colors.ink[400]} />
+          </Pressable>
+        ) : null}
       </View>
       {c.authorRoleTitle ? <Text className="text-ink-400 text-xs -mt-0.5" numberOfLines={1}>{c.authorRoleTitle}</Text> : null}
       <Text className="text-ink-700 leading-5">{c.content}</Text>

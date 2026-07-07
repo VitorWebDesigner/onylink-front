@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 import { BottomSheet, SheetHeader } from '../BottomSheet';
 import { Icon } from '../Icon';
+import { useDialog } from '../feedback/dialog';
 import { useToast } from '../feedback/toast';
 import { colors } from '../../theme/colors';
 import { PRESSED_OPACITY } from '../../theme/tokens';
@@ -18,18 +19,31 @@ export function ReportSheet({ visible, targetType, targetId, onClose }: {
   onClose: () => void;
 }) {
   const toast = useToast();
+  const dialog = useDialog();
   const report = useReportContent();
 
+  // toda ação tem CONFIRMAÇÃO + retorno via toast (pedido do dono)
   function send(reason: string) {
     if (!targetId) return;
+    const id = targetId;
     onClose();
-    report.mutate(
-      { targetType, targetId, reason },
-      {
-        onSuccess: () => toast.success('Denúncia recebida. Nossa moderação vai revisar.'),
-        onError: () => toast.error('Não foi possível enviar a denúncia.'),
-      },
-    );
+    void (async () => {
+      const ok = await dialog.confirm({
+        title: 'Enviar denúncia?',
+        message: `Motivo: ${reason}. Nossa moderação vai revisar — a denúncia é anônima para o autor.`,
+        confirmText: 'Denunciar',
+        cancelText: 'Cancelar',
+        destructive: true,
+      });
+      if (!ok) return;
+      report.mutate(
+        { targetType, targetId: id, reason },
+        {
+          onSuccess: () => toast.success('Denúncia recebida. Nossa moderação vai revisar.'),
+          onError: () => toast.error('Não foi possível enviar a denúncia.'),
+        },
+      );
+    })();
   }
 
   const label = targetType === 'POST' ? 'a publicação' : targetType === 'COMMENT' ? 'o comentário' : 'o perfil';

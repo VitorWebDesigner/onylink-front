@@ -17,10 +17,13 @@ import { HIT_SLOP, PRESSED_OPACITY } from '../../theme/tokens';
 import { compactNumber } from '../../lib/format';
 import { timeAgo } from '../../lib/time';
 import {
-  useAddOppComment, useOppComments, useOpportunity, useRecordOppView, useToggleOppSubscription,
+  useAddOppComment, useDeleteOpportunity, useOppComments, useOpportunity, useRecordOppView, useToggleOppSubscription,
   useToggleOppCommentInsight, useToggleOppCommentLike, useToggleOppCommentRepost, useToggleOppCommentShare,
   useToggleOppInsight, useToggleOppLike,
 } from '../../features/opportunities/hooks';
+import { BottomSheet } from '../../components/BottomSheet';
+import { ReportSheet } from '../../components/moderation/ReportSheet';
+import { useDialog } from '../../components/feedback/dialog';
 import { KIND_META } from '../../features/opportunities/types';
 import { useAuth } from '../../store/auth';
 import { useKeyboardPadding } from '../../lib/keyboard';
@@ -44,6 +47,11 @@ export default function OpportunityDetail() {
   const [text, setText] = useState('');
   const [replyTo, setReplyTo] = useState<CommentNode | null>(null);
   const kbPad = useKeyboardPadding(); // composer acima do teclado nos DOIS SOs
+  const dialog = useDialog();
+  const deleteOpp = useDeleteOpportunity();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [reportAuthor, setReportAuthor] = useState(false);
+  const isOwner = !!o?.authorId && o.authorId === user?.id;
 
   const count = comments?.length ?? 0;
 
@@ -79,7 +87,7 @@ export default function OpportunityDetail() {
           >
             <Icon name="bell" set={o?.subscribed ? 'bold' : 'light'} size={23} color={o?.subscribed ? colors.brand[500] : colors.ink[900]} />
           </Pressable>
-          <Pressable hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })} className="w-8 h-8 rounded-full border border-surface-border items-center justify-center">
+          <Pressable onPress={() => setMenuOpen(true)} hitSlop={HIT_SLOP} style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })} className="w-8 h-8 rounded-full border border-surface-border items-center justify-center">
             <Icon name="more" size={16} color={colors.ink[900]} />
           </Pressable>
         </View>
@@ -157,6 +165,54 @@ export default function OpportunityDetail() {
           />
         </View>
       )}
+
+      {/* 3-pontos: denunciar autor · excluir (dono) — com confirmação + toast */}
+      <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)}>
+        <View className="pb-2">
+          {o && !isOwner && o.authorId ? (
+            <Pressable
+              onPress={() => { setMenuOpen(false); setTimeout(() => setReportAuthor(true), 250); }}
+              style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
+              className="flex-row items-center gap-3 px-4 py-4 border-b border-surface-border"
+            >
+              <Icon name="error" set="light" size={20} color={colors.ink[700]} />
+              <Text className="text-ink-900 text-[15px]">Denunciar {o.authorName}</Text>
+            </Pressable>
+          ) : null}
+          {o && isOwner ? (
+            <Pressable
+              onPress={() => {
+                setMenuOpen(false);
+                void (async () => {
+                  const ok = await dialog.confirm({
+                    title: 'Excluir oportunidade?',
+                    message: 'Ela some da lista e as candidaturas deixam de aparecer.',
+                    confirmText: 'Excluir',
+                    cancelText: 'Cancelar',
+                    destructive: true,
+                  });
+                  if (ok) deleteOpp.mutate(o.id, {
+                    onSuccess: () => { toast.success('Oportunidade excluída.'); router.back(); },
+                    onError: () => toast.error('Não foi possível excluir.'),
+                  });
+                })();
+              }}
+              style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
+              className="flex-row items-center gap-3 px-4 py-4 border-b border-surface-border"
+            >
+              <Icon name="trash" set="light" size={20} color={colors.danger} />
+              <Text className="text-danger font-semibold text-[15px]">Excluir oportunidade</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </BottomSheet>
+
+      <ReportSheet
+        visible={reportAuthor}
+        targetType="USER"
+        targetId={o?.authorId ?? null}
+        onClose={() => setReportAuthor(false)}
+      />
     </SafeAreaView>
   );
 }

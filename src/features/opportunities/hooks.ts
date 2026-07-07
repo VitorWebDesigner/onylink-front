@@ -54,6 +54,20 @@ export function useOpportunity(id: string) {
   });
 }
 
+/** Exclui a PRÓPRIA oportunidade (soft delete no back). */
+export function useDeleteOpportunity() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/web/opportunities/${id}`),
+    onSuccess: (_d, id) => {
+      qc.setQueriesData<Opportunity[]>({ queryKey: ['opportunities'] }, (old) => old?.filter((o) => o.id !== id));
+      qc.setQueriesData<Opportunity[]>({ queryKey: ['my-opportunities'] }, (old) => old?.filter((o) => o.id !== id));
+      qc.setQueriesData<Opportunity[]>({ queryKey: ['user-opportunities'] }, (old) => old?.filter((o) => o.id !== id));
+      qc.removeQueries({ queryKey: ['opportunity', id] });
+    },
+  });
+}
+
 export interface CreateOpportunityInput {
   kind: OpportunityKind;
   title: string;

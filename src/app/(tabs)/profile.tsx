@@ -12,6 +12,7 @@ import { Icon, type IconName } from '../../components/Icon';
 import { ProfileHeader } from '../../components/profile/ProfileHeader';
 import { ProfileTabsBar, useProfileTabList, type ProfileTab } from '../../components/profile/ProfileTabs';
 import { FollowsSheet, type FollowsKind } from '../../components/profile/FollowsSheet';
+import { PostMenuSheet } from '../../components/moderation/PostMenuSheet';
 import { useToast } from '../../components/feedback/toast';
 import { colors } from '../../theme/colors';
 import { HIT_SLOP, PRESSED_OPACITY } from '../../theme/tokens';
@@ -43,7 +44,9 @@ export default function Profile() {
   const [follows, setFollows] = useState<FollowsKind | null>(null);
   const [pinTarget, setPinTarget] = useState<FeedPost | null>(null);
   const pin = usePinPost();
-  const tabList = useProfileTabList(p?.id ?? '', tab, { onPostMenu: (po) => { if (po.authorId === user?.id) setPinTarget(po); } });
+  // menu em TODO post das abas: próprio = fixar/excluir; de terceiro (aba
+  // Reposts) = denunciar. Nunca botão morto.
+  const tabList = useProfileTabList(p?.id ?? '', tab, { onPostMenu: (po) => setPinTarget(po) });
 
   // ——— modo mock (offline total, EXPO_PUBLIC_MOCK=1) ———
   if (config.mock.profile) {
@@ -150,24 +153,23 @@ export default function Profile() {
       {p ? <FollowsSheet userId={p.id} initialKind={follows ?? 'followers'} visible={!!follows} onClose={() => setFollows(null)} /> : null}
 
       {/* fixar/desafixar post (toque longo num post próprio da aba Publicações) */}
-      <BottomSheet visible={!!pinTarget} onClose={() => setPinTarget(null)}>
-        <View className="pb-2">
-          <Pressable
-            onPress={() => {
-              if (pinTarget) {
-                pin.mutate({ postId: pinTarget.id, pinned: !!pinTarget.pinned });
-                toast.success(pinTarget.pinned ? 'Post desafixado.' : 'Post fixado no seu perfil.');
-              }
-              setPinTarget(null);
-            }}
-            style={({ pressed }) => ({ opacity: pressed ? PRESSED_OPACITY : 1 })}
-            className="flex-row items-center gap-3 px-4 py-4"
-          >
-            <Icon name="bookmark" set="light" size={22} color={colors.ink[900]} />
-            <Text className="text-ink-900 font-semibold text-[15px]">{pinTarget?.pinned ? 'Desafixar do perfil' : 'Fixar no perfil'}</Text>
-          </Pressable>
-        </View>
-      </BottomSheet>
+      <PostMenuSheet
+        post={pinTarget}
+        onClose={() => setPinTarget(null)}
+        extraRows={pinTarget && pinTarget.authorId === user?.id ? [{
+          icon: 'bookmark',
+          label: pinTarget.pinned ? 'Desafixar do perfil' : 'Fixar no perfil',
+          onPress: () => {
+            pin.mutate(
+              { postId: pinTarget.id, pinned: !!pinTarget.pinned },
+              {
+                onSuccess: () => toast.success(pinTarget.pinned ? 'Post desafixado.' : 'Post fixado no seu perfil.'),
+                onError: () => toast.error('Não foi possível fixar.'),
+              },
+            );
+          },
+        }] : undefined}
+      />
     </SafeAreaView>
   );
 }

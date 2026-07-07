@@ -18,8 +18,10 @@ import { useUser } from '../../features/users/hooks';
 import { useOpenDm } from '../../features/messages/hooks';
 import { useToast } from '../../components/feedback/toast';
 import { ReportSheet } from '../../components/moderation/ReportSheet';
+import { PostMenuSheet } from '../../components/moderation/PostMenuSheet';
 import { BottomSheet } from '../../components/BottomSheet';
 import { Share } from 'react-native';
+import type { FeedPost } from '../../features/feed/types';
 
 /** Perfil PÚBLICO: perfil rico + Seguir/Contato + sugestões (só APÓS seguir) + abas. */
 export default function UserProfileScreen() {
@@ -35,8 +37,9 @@ export default function UserProfileScreen() {
   const [reportOpen, setReportOpen] = useState(false);
   const [follows, setFollows] = useState<FollowsKind | null>(null);
   const [tab, setTab] = useState<ProfileTab>('posts');
+  const [menuPost, setMenuPost] = useState<FeedPost | null>(null);
   // abas usam o id RESOLVIDO (a rota aceita @handle nas menções da bio — Fase 4)
-  const tabList = useProfileTabList(u?.id ?? '', tab);
+  const tabList = useProfileTabList(u?.id ?? '', tab, { onPostMenu: (po) => setMenuPost(po) });
 
   const isMe = !!u && u.id === me?.id;
   const hasContact = !!(u?.contactEmail || u?.contactWhatsapp || u?.contactUrl);
@@ -153,6 +156,8 @@ export default function UserProfileScreen() {
           </BottomSheet>
 
           <ReportSheet visible={reportOpen} targetType="USER" targetId={u.id} onClose={() => setReportOpen(false)} />
+          {/* 3-pontos dos posts das abas (denunciar/excluir) */}
+          <PostMenuSheet post={menuPost} onClose={() => setMenuPost(null)} />
         </>
       )}
     </SafeAreaView>

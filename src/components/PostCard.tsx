@@ -148,7 +148,8 @@ export function PostCard({ post, onToggleInsight, onToggleLike, onToggleRepost, 
             <Text className="text-ink-400 text-[13px]">{timeAgo(post.createdAt)}</Text>
           </Pressable>
           {showFollow ? <FollowPill followed={post.authorFollowed} onPress={() => onToggleFollow!(post)} /> : null}
-          {!hideMenu ? <MoreCircle onPress={onMenu ? () => onMenu(post) : undefined} /> : null}
+          {/* 3-pontos SÓ quando há menu de verdade — botão morto é bug de UX */}
+          {!hideMenu && onMenu ? <MoreCircle onPress={() => onMenu(post)} /> : null}
         </View>
         {post.authorRoleTitle ? <Text className="text-ink-400 text-xs mt-1" numberOfLines={1}>{post.authorRoleTitle}</Text> : null}
         {post.content ? <HashtagText text={post.content} className="text-ink-700 leading-5 mt-2" /> : null}
@@ -206,7 +207,8 @@ export function PostCard({ post, onToggleInsight, onToggleLike, onToggleRepost, 
               <View className="flex-1" />
               {/* botão Seguir ocupa o antigo lugar da tag */}
               {showFollow ? <FollowPill followed={post.authorFollowed} onPress={() => onToggleFollow!(post)} /> : null}
-              {!hideMenu ? <MoreCircle onPress={onMenu ? () => onMenu(post) : undefined} /> : null}
+              {/* 3-pontos SÓ quando há menu de verdade — botão morto é bug de UX */}
+          {!hideMenu && onMenu ? <MoreCircle onPress={() => onMenu(post)} /> : null}
             </View>
             {post.authorRoleTitle ? <Text className="text-ink-400 text-xs -mt-0.5" numberOfLines={1}>{post.authorRoleTitle}</Text> : null}
             {post.content ? <HashtagText text={post.content} className="text-ink-700 leading-5 mt-1" /> : null}

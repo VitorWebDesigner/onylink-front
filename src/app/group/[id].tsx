@@ -188,9 +188,12 @@ export default function CommunityFeed() {
             const currentlyFeatured = !!adminTarget.featuredByName;
             feature.mutate(
               { postId: adminTarget.id, featured: currentlyFeatured },
-              { onError: (e) => toast.error(e instanceof Error ? e.message : 'Não foi possível atualizar.') },
+              {
+                // toast SÓ quando a ação de fato aconteceu (pedido do dono)
+                onSuccess: () => toast.success(currentlyFeatured ? 'Removido do feed geral.' : 'Repostado no feed geral!'),
+                onError: (e) => toast.error(e instanceof Error ? e.message : 'Não foi possível atualizar.'),
+              },
             );
-            toast.success(currentlyFeatured ? 'Removido do feed geral.' : 'Repostado no feed geral!');
           },
         }] : undefined}
       />
