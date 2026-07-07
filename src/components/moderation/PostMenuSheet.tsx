@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { BottomSheet } from '../BottomSheet';
+import { afterSheetClose, BottomSheet } from '../BottomSheet';
 import { Icon, type IconName } from '../Icon';
 import { useDialog } from '../feedback/dialog';
 import { useToast } from '../feedback/toast';
@@ -51,6 +51,7 @@ export function PostMenuSheet({ post, onClose, onDeleted, extraRows }: {
   async function onDelete() {
     if (!post) return;
     onClose();
+    await afterSheetClose(); // Dialog só após o sheet desmontar (senão trava a tela)
     const ok = await dialog.confirm({
       title: 'Excluir publicação?',
       message: 'Ela some do feed para todo mundo. Essa ação não tem volta.',

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { BottomSheet } from '../components/BottomSheet';
+import { afterSheetClose, BottomSheet } from '../components/BottomSheet';
 import { EmptyState } from '../components/EmptyState';
 import { Icon, type IconName } from '../components/Icon';
 import { useDialog } from '../components/feedback/dialog';
@@ -38,6 +38,7 @@ export default function ModerationScreen() {
 
   async function act(r: ModerationReport, action: ResolveAction | 'DISMISS') {
     setTarget(null);
+    await afterSheetClose(); // Dialog só após o sheet desmontar
     const conf: Record<string, { title: string; message: string; confirmText: string } | null> = {
       DISMISS: null,
       REMOVE: { title: 'Remover conteúdo?', message: 'O conteúdo denunciado some do app para todo mundo.', confirmText: 'Remover' },

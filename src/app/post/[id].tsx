@@ -22,7 +22,7 @@ import { useKeyboardPadding } from '../../lib/keyboard';
 import { useDialog } from '../../components/feedback/dialog';
 import { PostMenuSheet } from '../../components/moderation/PostMenuSheet';
 import { ReportSheet } from '../../components/moderation/ReportSheet';
-import { BottomSheet } from '../../components/BottomSheet';
+import { afterSheetClose, BottomSheet } from '../../components/BottomSheet';
 import { useAddComment, useComments, useDeleteComment, useToggleCommentInsight, useToggleCommentLike, useToggleCommentRepost, useToggleCommentShare } from '../../features/comments/hooks';
 
 export default function PostDetail() {
@@ -182,6 +182,7 @@ export default function PostDetail() {
                 const cid = commentMenu.id;
                 setCommentMenu(null);
                 void (async () => {
+                  await afterSheetClose();
                   const ok = await dialog.confirm({
                     title: 'Excluir comentário?',
                     message: 'Ele some da conversa para todo mundo.',

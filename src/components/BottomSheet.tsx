@@ -20,6 +20,13 @@ export const sheetShadow = {
   elevation: 16,
 } as const;
 
+/**
+ * Espera o Modal do sheet TERMINAR de desmontar antes de abrir outro Modal
+ * (Dialog global, outro sheet). Abrir Modal durante o dismiss de outro trava a
+ * tela no iOS (overlay preso) — TODO fluxo sheet→Dialog passa por aqui (§13).
+ */
+export const afterSheetClose = () => new Promise<void>((resolve) => setTimeout(resolve, 320));
+
 /** Header padrão de sheet COM TÍTULO — mesmo tamanho do header do compose
  *  ("Nova publicação": py-7, título text-base font-semibold centrado, borda
  *  inferior). Use em TODO sheet titulado (§13 — pedido do dono). */

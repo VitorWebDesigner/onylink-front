@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Avatar } from '../../components/Avatar';
-import { BottomSheet, SheetHeader, SheetScrollView } from '../../components/BottomSheet';
+import { afterSheetClose, BottomSheet, SheetHeader, SheetScrollView } from '../../components/BottomSheet';
 import { Button } from '../../components/Button';
 import { Checkbox } from '../../components/Checkbox';
 import { EmptyState } from '../../components/EmptyState';
@@ -92,6 +92,7 @@ export default function ChatDetails() {
   }
 
   async function onTransfer(targetId: string, targetName: string) {
+    await afterSheetClose(); // vem do sheet de ações — Dialog só após ele desmontar
     const ok = await dialog.confirm({
       title: 'Transferir propriedade?',
       message: `${targetName} vira o dono do grupo. Você continua como admin.`,
@@ -103,6 +104,7 @@ export default function ChatDetails() {
   }
 
   async function onRemove(targetId: string) {
+    await afterSheetClose();
     const ok = await dialog.confirm({
       title: 'Remover do grupo?',
       message: 'A pessoa deixa de ver e mandar mensagens neste grupo.',

@@ -21,7 +21,7 @@ import {
   useToggleOppCommentInsight, useToggleOppCommentLike, useToggleOppCommentRepost, useToggleOppCommentShare,
   useToggleOppInsight, useToggleOppLike,
 } from '../../features/opportunities/hooks';
-import { BottomSheet } from '../../components/BottomSheet';
+import { afterSheetClose, BottomSheet } from '../../components/BottomSheet';
 import { ReportSheet } from '../../components/moderation/ReportSheet';
 import { useDialog } from '../../components/feedback/dialog';
 import { KIND_META } from '../../features/opportunities/types';
@@ -184,6 +184,7 @@ export default function OpportunityDetail() {
               onPress={() => {
                 setMenuOpen(false);
                 void (async () => {
+                  await afterSheetClose();
                   const ok = await dialog.confirm({
                     title: 'Excluir oportunidade?',
                     message: 'Ela some da lista e as candidaturas deixam de aparecer.',

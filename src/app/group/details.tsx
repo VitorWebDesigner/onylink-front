@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '../../components/Avatar';
-import { BottomSheet, SheetHeader, SheetScrollView } from '../../components/BottomSheet';
+import { afterSheetClose, BottomSheet, SheetHeader, SheetScrollView } from '../../components/BottomSheet';
 import { CountBadge } from '../../components/CountBadge';
 import { UserBadges } from '../../components/UserBadges';
 import { EmptyState } from '../../components/EmptyState';
@@ -112,6 +112,7 @@ export default function CommunityDetails() {
   }
 
   async function onTransfer(targetId: string, targetName: string) {
+    await afterSheetClose(); // vem do sheet de ações do membro — Dialog só após ele desmontar
     const ok = await dialog.confirm({
       title: 'Transferir propriedade?',
       message: `${targetName} vira o dono da comunidade. Você continua como admin e poderá sair depois.`,
@@ -126,6 +127,7 @@ export default function CommunityDetails() {
   }
 
   async function onRemove(targetId: string) {
+    await afterSheetClose();
     const ok = await dialog.confirm({
       title: 'Remover da comunidade?',
       message: 'A pessoa perde o acesso às publicações e pode pedir para entrar de novo.',

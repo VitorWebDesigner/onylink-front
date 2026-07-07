@@ -1,5 +1,5 @@
 import { Pressable, Text, View } from 'react-native';
-import { BottomSheet, SheetHeader } from '../BottomSheet';
+import { afterSheetClose, BottomSheet, SheetHeader } from '../BottomSheet';
 import { Icon } from '../Icon';
 import { useDialog } from '../feedback/dialog';
 import { useToast } from '../feedback/toast';
@@ -28,6 +28,7 @@ export function ReportSheet({ visible, targetType, targetId, onClose }: {
     const id = targetId;
     onClose();
     void (async () => {
+      await afterSheetClose(); // Dialog só depois do Modal do sheet desmontar (senão trava)
       const ok = await dialog.confirm({
         title: 'Enviar denúncia?',
         message: `Motivo: ${reason}. Nossa moderação vai revisar — a denúncia é anônima para o autor.`,
