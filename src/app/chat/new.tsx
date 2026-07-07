@@ -115,9 +115,10 @@ export default function NewChatGroup() {
             </View>
           </View>
 
-          {/* selecionados — fileira de AVATARES com × no canto (estilo WhatsApp) */}
+          {/* selecionados — fileira de AVATARES com × no canto (estilo WhatsApp);
+              paddingTop dá respiro pro × que SOBRESSAI do avatar (senão corta no topo) */}
           {selected.length ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="always" contentContainerStyle={{ gap: 14, paddingVertical: 2 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="always" contentContainerStyle={{ gap: 14, paddingTop: 10, paddingBottom: 2 }}>
               {selected.map((u) => (
                 <View key={u.id} className="items-center" style={{ width: 56 }}>
                   <View>

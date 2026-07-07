@@ -283,9 +283,10 @@ export default function ChatDetails() {
               className="h-11 rounded-input px-4 bg-surface-muted text-ink-900 border border-surface-border"
             />
           </View>
-          {/* selecionados — fileira de avatares com × (mesmo padrão do criar grupo) */}
+          {/* selecionados — fileira de avatares com × (mesmo padrão do criar grupo);
+              paddingTop dá respiro pro × que sobressai do avatar (senão corta) */}
           {selected.length ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="always" contentContainerStyle={{ gap: 14, paddingHorizontal: 16, paddingBottom: 8 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="always" contentContainerStyle={{ gap: 14, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 8 }}>
               {selected.map((u) => (
                 <View key={u.id} className="items-center" style={{ width: 56 }}>
                   <View>

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { config } from '../../lib/config';
+import { useChatSocket } from '../../lib/chatSocket';
 import { useAuth } from '../../store/auth';
 import { useGroups } from '../groups/hooks';
 import { toConversation, type ChatMember, type ChatMessage, type Conversation, type RawConversationRow } from './types';
@@ -25,15 +26,17 @@ const toMessage = (r: RawMessageRow): ChatMessage => ({
   createdAt: r.created_at,
 });
 
-/** Conversas (1:1 + grupos de chat), fixadas primeiro. Poll 10s (badges/última msg). */
+/** Conversas (1:1 + grupos de chat), fixadas primeiro. WebSocket empurra as
+ *  novidades; o poll é FALLBACK (relaxa quando conectado). */
 export function useConversations() {
   const qc = useQueryClient();
   const authed = useAuth((s) => s.status === 'authenticated');
+  const wsConnected = useChatSocket((s) => s.connected);
   return useQuery({
     queryKey: ['conversations'],
     enabled: authed && !config.mock.groups,
     staleTime: 0,
-    refetchInterval: () => (qc.isMutating() ? false : 6_000),
+    refetchInterval: () => (qc.isMutating() ? false : wsConnected ? 20_000 : 6_000),
     queryFn: async (): Promise<Conversation[]> => {
       const rows = await api.get<RawConversationRow[]>('/web/messages?limit=50');
       return (rows ?? []).map(toConversation);
@@ -57,16 +60,17 @@ export function useConversation(id: string) {
   });
 }
 
-/** Mensagens da conversa aberta — TEMPO REAL v1 = polling CURTO (2,5s) +
- *  push em foreground invalida na hora (_layout). Abrir/poll marca lida no
- *  back. Guarda otimista via isMutating. */
+/** Mensagens da conversa aberta — TEMPO REAL: WebSocket empurra a mensagem na
+ *  hora (lib/chatSocket aplica no cache); o polling vira FALLBACK — 15s
+ *  conectado, 2,5s se o socket cair. Abrir/poll marca lida no back. */
 export function useMessages(id: string) {
   const qc = useQueryClient();
+  const wsConnected = useChatSocket((s) => s.connected);
   return useQuery({
     queryKey: ['chat-messages', id],
     enabled: !!id && !config.mock.groups,
     staleTime: 0,
-    refetchInterval: () => (qc.isMutating() ? false : 2_500),
+    refetchInterval: () => (qc.isMutating() ? false : wsConnected ? 15_000 : 2_500),
     queryFn: async (): Promise<{ items: ChatMessage[]; othersReadAt: string | null }> => {
       const r = await api.get<{ items: RawMessageRow[]; othersReadAt: string | null }>(`/web/messages/${id}/messages?limit=60`);
       // zera o badge desta conversa na lista (o back já marcou lida)

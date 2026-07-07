@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { queryClient } from '../lib/queryClient';
+import { startChatSocket, stopChatSocket } from '../lib/chatSocket';
 import { useAuth } from '../store/auth';
 import { ToastProvider } from '../components/feedback/toast';
 import { DialogProvider } from '../components/feedback/dialog';
@@ -17,6 +18,7 @@ import { MediaViewerProvider } from '../components/media/MediaViewerProvider';
 /** Redireciona entre área autenticada e pública conforme o status da sessão. */
 function AuthGate() {
   const status = useAuth((s) => s.status);
+  const userId = useAuth((s) => s.user?.id ?? null);
   const bootstrap = useAuth((s) => s.bootstrap);
   const segments = useSegments();
   const router = useRouter();
@@ -24,6 +26,13 @@ function AuthGate() {
   useEffect(() => {
     void bootstrap();
   }, [bootstrap]);
+
+  // WebSocket do chat: liga com a sessão, cai fora no logout
+  useEffect(() => {
+    if (status === 'authenticated' && userId) startChatSocket(userId);
+    else if (status === 'guest') stopChatSocket();
+    return () => { if (status === 'authenticated') stopChatSocket(); };
+  }, [status, userId]);
 
   // tocar num PUSH → navega pro deep link (data.url) — inclusive com o app fechado
   useEffect(() => {
